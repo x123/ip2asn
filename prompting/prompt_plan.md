@@ -21,7 +21,7 @@ chunk within a phase represents a small, testable unit of work.
     * **Task:** Add a failing test for a perfectly aligned CIDR block (e.g., `192.168.0.0` to `192.168.0.255`), asserting it returns a single `/24`.
     * **Task:** Implement the core conversion algorithm to handle aligned blocks.
 
-* **[ ] Chunk 1.3: Complex & Generic Cases**
+* **[x] Chunk 1.3: Complex & Generic Cases**
     * **TDD: Write a failing test** for a non-aligned range that requires multiple CIDRs (e.g., `10.0.0.1` to `10.0.0.10`).
     * **Task:** Refine the algorithm to correctly handle arbitrary start and end boundaries.
     * **Task:** Add failing tests for equivalent IPv6 ranges (single address, aligned, non-aligned).
