@@ -5,3 +5,4 @@ flake.lock
 result
 target/
 .DS_Store
+/.cargo

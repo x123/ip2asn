@@ -52,19 +52,50 @@ chunk within a phase represents a small, testable unit of work.
 
 ---
 
+Excellent. Here is the detailed plan for Phase 3, formatted for `prompt_plan.md`, based on the "Sequential Assembly Line" approach.
+
 ### **Phase 3: Building & Querying the Map** 🗺️
 
-**Goal:** Integrate the parser, `range_to_cidrs` utility, and the lookup table to create a fully functional, in-memory map.
+**Goal:** Integrate the parser, `range_to_cidrs` utility, and a new string
+interner to construct a fully functional, queryable `IpAsnMap` from a data
+source.
 
-* **[ ] Chunk 3.1: String Interner**
-    * **TDD: Write a failing test** for a new, private string interning utility, asserting that it correctly assigns unique and reused IDs for a mix of strings.
-    * **Task:** Implement the string interner using a `HashMap` and a `Vec`.
+*   **[x] Chunk 3.1: String Interner Utility**
+    *   **Task:** Create a new `src/interner.rs` module and declare it in `src/lib.rs`.
+    *   **Task:** In `src/interner.rs`, define a `StringInterner` struct containing a `HashMap<String, u32>` for lookups and a `Vec<String>` for storage.
+    *   **TDD: Write a failing unit test** in `interner.rs`'s `tests` module. The test should:
+        *   Create an interner.
+        *   Intern the string "Apple Inc." and assert it gets ID 0.
+        *   Intern the string "Google LLC" and assert it gets ID 1.
+        *   Intern "Apple Inc." again and assert it gets ID 0.
+        *   Assert that retrieving ID 1 returns `"Google LLC"`.
+    *   **Task:** Implement the `get_or_intern(&mut self, s: &str) -> u32` and `get(&self, id: u32) -> &str` methods on `StringInterner` to make the tests pass.
 
-* **[ ] Chunk 3.2: Builder & Lookup Integration**
-    * **TDD: Write a failing test** in `tests/integration.rs` that builds a map from an in-memory source and asserts that a lookup for a known IP fails or panics.
-    * **Task:** Implement the `build` method, wiring together the line reader, parser, `range_to_cidrs`, interner, and `IpNetworkTable` insertion.
-    * **Task:** Implement the `lookup` method to query the table and resolve the internal `AsnRecord` into a public `AsnInfoView`.
-    * **Task:** Add assertions to the integration test for IPs that are *not* in the map (expecting `None`) and for edge-of-range IPs to ensure all tests pass.
+*   **[ ] Chunk 3.2: Builder & Lookup Integration**
+    *   **Task:** Add the `ip_network_table` crate as a dependency in `Cargo.toml`.
+    *   **Task:** Create a new `tests/integration.rs` file.
+    *   **TDD: Write a failing integration test** in `tests/integration.rs`. This test will be the primary driver for the integration work. It should:
+        1.  Define a multi-line string of test TSV data.
+        2.  Pass the data to `Builder::with_source()`.
+        3.  Call `.build()` and assert the `Result` is `Ok`.
+        4.  Call `.lookup()` on the resulting `IpAsnMap` with an IP known to be in the first range and assert it fails (as `lookup` is not yet implemented).
+    *   **Task:** Implement the `IpAsnMap::lookup` method. It should query the internal `IpNetworkTable` and, upon finding a record, use the `organization_idx` to retrieve the organization name from the interner's storage and construct the `AsnInfoView`.
+    *   **Task:** Implement the `Builder::build` method. This is the core assembly logic:
+        1.  Initialize a `StringInterner` and an `IpNetworkTable`.
+        2.  Create a `BufReader` for the source.
+        3.  Loop through each line of the source data.
+        4.  For each valid line, call `parser::parse_line`.
+        5.  Use the interner to get an ID for the organization string.
+        6.  Create an `AsnRecord` with the interned ID.
+        7.  Call `range_to_cidrs` with the start and end IPs.
+        8.  Iterate through the resulting CIDRs and insert each one into the `IpNetworkTable` with the `AsnRecord`.
+        9.  Store the final `IpNetworkTable` and the interner's `Vec<String>` in the `IpAsnMap`.
+    *   **Task:** Refine the integration test. Add assertions for:
+        *   An IP address that falls in the middle of a range.
+        *   An IP address at the exact start/end of a range.
+        *   An IP that is *not* in any range, asserting the lookup returns `None`.
+        *   An IP that maps to an organization that appeared multiple times in the source data, ensuring the `AsnInfoView` is correct.
+    *   **Task:** Ensure all tests pass.
 
 ---
 

@@ -1,3 +1,4 @@
+mod interner;
 pub mod parser;
 pub mod range;
 pub mod types;
