@@ -116,3 +116,96 @@ fn test_builder_from_path_not_found() {
         _ => panic!("Expected an I/O error"),
     }
 }
+
+#[cfg(feature = "fetch")]
+mod fetch_tests {
+    use super::*;
+    use std::io::Read;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    #[tokio::test]
+    async fn test_builder_from_url() {
+        // Start a mock server.
+        let server = MockServer::start().await;
+
+        // Read the gzipped test data.
+        let mut file = std::fs::File::open("testdata/testdata-small-ip2asn.tsv.gz").unwrap();
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer).unwrap();
+
+        // Set up the mock response.
+        Mock::given(method("GET"))
+            .and(path("/ip2asn.tsv.gz"))
+            .respond_with(ResponseTemplate::new(200).set_body_bytes(buffer))
+            .mount(&server)
+            .await;
+
+        // Construct the URL.
+        let url = format!("{}/ip2asn.tsv.gz", server.uri());
+
+        // Build the map from the URL.
+        let url_clone = url.clone();
+        let map = tokio::task::spawn_blocking(move || {
+            Builder::from_url(&url_clone).unwrap().build().unwrap()
+        })
+        .await
+        .unwrap();
+
+        // Perform lookups to verify the data was loaded correctly.
+        let view = map.lookup("154.16.226.100".parse().unwrap()).unwrap();
+        assert_eq!(view.asn, 61317);
+        assert_eq!(view.organization, "ASDETUK www.heficed.com");
+
+        let view_ipv6 = map.lookup("2001:67c:2309::1".parse().unwrap()).unwrap();
+        assert_eq!(view_ipv6.asn, 0);
+        assert_eq!(view_ipv6.organization, "Not routed");
+    }
+
+    #[tokio::test]
+    async fn test_builder_from_url_not_gzipped() {
+        let server = MockServer::start().await;
+        let test_data = "1.0.0.0\t1.0.0.255\t13335\tUS\tCLOUDFLARENET";
+        Mock::given(method("GET"))
+            .and(path("/ip2asn.tsv"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(test_data))
+            .mount(&server)
+            .await;
+
+        let url = format!("{}/ip2asn.tsv", server.uri());
+        let url_clone = url.clone();
+        let map = tokio::task::spawn_blocking(move || {
+            Builder::from_url(&url_clone).unwrap().build().unwrap()
+        })
+        .await
+        .unwrap();
+
+        let view = map.lookup("1.0.0.1".parse().unwrap()).unwrap();
+        assert_eq!(view.asn, 13335);
+        assert_eq!(view.organization, "CLOUDFLARENET");
+    }
+
+    #[tokio::test]
+    async fn test_builder_from_url_http_error() {
+        let server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .and(path("/not-found"))
+            .respond_with(ResponseTemplate::new(404))
+            .mount(&server)
+            .await;
+
+        let url = format!("{}/not-found", server.uri());
+        let url_clone = url.clone();
+        let result = tokio::task::spawn_blocking(move || Builder::from_url(&url_clone)).await;
+
+        assert!(result.is_ok());
+        let inner_result = result.unwrap();
+        assert!(inner_result.is_err());
+        match inner_result {
+            Err(Error::Http(_)) => {
+                // Expected error
+            }
+            _ => panic!("Expected an HTTP error"),
+        }
+    }
+}

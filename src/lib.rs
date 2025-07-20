@@ -21,6 +21,10 @@ pub enum Error {
     /// An error occurred during an I/O operation.
     Io(std::io::Error),
 
+    /// An error occurred during an HTTP request.
+    #[cfg(feature = "fetch")]
+    Http(reqwest::Error),
+
     /// A line in the data source was malformed (only in strict mode).
     Parse {
         line_number: usize,
@@ -97,7 +101,7 @@ impl IpAsnMap {
 /// A builder for configuring and loading an `IpAsnMap`.
 #[derive(Default)]
 pub struct Builder<'a> {
-    source: Option<Box<dyn BufRead + 'a>>,
+    source: Option<Box<dyn BufRead + Send + 'a>>,
 }
 
 impl<'a> Builder<'a> {
@@ -111,15 +115,36 @@ impl<'a> Builder<'a> {
     /// Gzip decompression is handled automatically by inspecting the file's magic bytes.
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let file = File::open(path.as_ref()).map_err(Error::Io)?;
-        let mut reader = BufReader::new(file);
+        let reader = BufReader::new(file);
+        Self::create_source_from_reader(reader)
+    }
 
-        // Check for gzip magic number
+    /// Creates a new builder that will read data from the given source.
+    pub fn with_source(source: impl BufRead + Send + 'a) -> Self {
+        Self {
+            source: Some(Box::new(source)),
+        }
+    }
+
+    /// Configures the builder to load data from a URL.
+    ///
+    /// This method is only available when the `fetch` feature is enabled.
+    /// Gzip decompression is handled automatically by inspecting the stream's magic bytes.
+    #[cfg(feature = "fetch")]
+    pub fn from_url(url: &str) -> Result<Self, Error> {
+        let response = reqwest::blocking::get(url).map_err(Error::Http)?;
+        let response = response.error_for_status().map_err(Error::Http)?;
+        let reader = BufReader::new(response);
+        Self::create_source_from_reader(reader)
+    }
+
+    fn create_source_from_reader(mut reader: impl BufRead + Send + 'a) -> Result<Self, Error> {
         let is_gzipped = {
             let header = reader.fill_buf().map_err(Error::Io)?;
             header.starts_with(&[0x1f, 0x8b])
         };
 
-        let source: Box<dyn BufRead + 'a> = if is_gzipped {
+        let source: Box<dyn BufRead + Send + 'a> = if is_gzipped {
             Box::new(BufReader::new(GzDecoder::new(reader)))
         } else {
             Box::new(reader)
@@ -128,13 +153,6 @@ impl<'a> Builder<'a> {
         Ok(Self {
             source: Some(source),
         })
-    }
-
-    /// Creates a new builder that will read data from the given source.
-    pub fn with_source(source: impl BufRead + 'a) -> Self {
-        Self {
-            source: Some(Box::new(source)),
-        }
     }
 
     /// Builds the `IpAsnMap`, consuming the builder.

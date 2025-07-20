@@ -121,7 +121,7 @@ methods on the `IpAsnMap` as defined in the specification.
     *   **Task:** Update the `Error` enum with an `Io(std::io::Error)` variant and propagate any file-related errors.
     *   **Task:** Ensure both tests (plain and gzipped) pass, demonstrating transparent decompression.
 
-*   **[ ] Chunk 4.2: `fetch` Feature & Network I/O**
+*   **[x] Chunk 4.2: `fetch` Feature & Network I/O**
     *   **Task:** Add `reqwest` (with `blocking` feature) and `wiremock` (as a `dev-dependency`) to `Cargo.toml`.
     *   **TDD: Write a failing integration test, gated by `#[cfg(feature = "fetch")]`.** The test should:
         1.  Start a `wiremock::MockServer`.
