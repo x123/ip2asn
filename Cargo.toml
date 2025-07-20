@@ -3,6 +3,12 @@ name = "ip2asn"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
+description = "A high-performance, memory-efficient Rust crate for mapping IP addresses to Autonomous System (AS) information."
+readme = "README.md"
+homepage = "https://github.com/x123/ip2asn"
+repository = "https://github.com/x123/ip2asn"
+keywords = ["ip", "asn", "geoip", "network", "lookup"]
+categories = ["network-programming", "parser-implementations", "data-structures"]
 
 [dependencies]
 ip_network = { version = "0.4.1", features = ["serde"] }

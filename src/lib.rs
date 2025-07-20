@@ -2,6 +2,14 @@
 //! A high-performance, memory-efficient Rust crate for mapping IP addresses to
 //! Autonomous System (AS) information with sub-microsecond lookups.
 //!
+//! The core of the crate is the [`IpAsnMap`], a read-optimized data structure
+//! constructed using a flexible [`Builder`]. The builder can ingest data from
+//! files, network streams, or in-memory buffers, and can operate in either a
+//! strict mode that errors on malformed lines or a resilient mode that skips
+//! them. Lookups are performed in sub-microsecond time, returning a lightweight
+//! view of the ASN details. The crate provides detailed [`Error`] and [`Warning`]
+//! types for robust error handling.
+//!
 //! # Quick Start
 //!
 //! ```rust

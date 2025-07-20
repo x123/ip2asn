@@ -217,7 +217,7 @@ documentation, and prepare the crate for its `v0.1.0` release on `crates.io`.
     *   **Task:** Audit the codebase against the "Flexibility" section (`C-CALLER-CONTROL`, `C-GENERIC`).
     *   **Task:** Audit the codebase against the "Type Safety" section (`C-BUILDER`, `C-CUSTOM-TYPE`).
 
-*   **[ ] Chunk 6A.4: Dependability, Debuggability & Future-Proofing Audit**
+*   **[x] Chunk 6A.4: Dependability, Debuggability & Future-Proofing Audit**
     *   **Task:** Audit the codebase against the "Dependability" section (`C-VALIDATE`).
     *   **Task:** Audit the codebase against the "Debuggability" section (`C-DEBUG`).
     *   **Task:** Audit the codebase against the "Future-Proofing" section (`C-STRUCT-PRIVATE`).

@@ -35,8 +35,8 @@
 *   [x] All items have a rustdoc example ([C-EXAMPLE](https://rust-lang.github.io/api-guidelines/documentation.html#c-example))
 *   [x] Examples use `?`, not `try!`, not `unwrap` ([C-QUESTION-MARK](https://rust-lang.github.io/api-guidelines/documentation.html#c-question-mark))
 *   [x] Function docs include error, panic, and safety considerations ([C-FAILURE](https://rust-lang.github.io/api-guidelines/documentation.html#c-failure))
-*   [ ] Prose contains hyperlinks to relevant things ([C-LINK](https://rust-lang.github.io/api-guidelines/documentation.html#c-link))
-*   [ ] Cargo.toml includes all common metadata ([C-METADATA](https://rust-lang.github.io/api-guidelines/documentation.html#c-metadata))
+*   [x] Prose contains hyperlinks to relevant things ([C-LINK](https://rust-lang.github.io/api-guidelines/documentation.html#c-link))
+*   [x] Cargo.toml includes all common metadata ([C-METADATA](https://rust-lang.github.io/api-guidelines/documentation.html#c-metadata))
 *   [ ] Release notes document all significant changes ([C-RELNOTES](https://rust-lang.github.io/api-guidelines/documentation.html#c-relnotes))
 *   [ ] Rustdoc does not show unhelpful implementation details ([C-HIDDEN](https://rust-lang.github.io/api-guidelines/documentation.html#c-hidden))
 
