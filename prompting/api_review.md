@@ -44,25 +44,25 @@
 
 *   [ ] Smart pointers do not add inherent methods ([C-SMART-PTR](https://rust-lang.github.io/api-guidelines/predictability.html#c-smart-ptr))
 *   [ ] Conversions live on the most specific type involved ([C-CONV-SPECIFIC](https://rust-lang.github.io/api-guidelines/predictability.html#c-conv-specific))
-*   [ ] Functions with a clear receiver are methods ([C-METHOD](https://rust-lang.github.io/api-guidelines/predictability.html#c-method))
+*   [x] Functions with a clear receiver are methods ([C-METHOD](https://rust-lang.github.io/api-guidelines/predictability.html#c-method))
 *   [ ] Functions do not take out-parameters ([C-NO-OUT](https://rust-lang.github.io/api-guidelines/predictability.html#c-no-out))
 *   [ ] Operator overloads are unsurprising ([C-OVERLOAD](https://rust-lang.github.io/api-guidelines/predictability.html#c-overload))
-*   [ ] Only smart pointers implement `Deref` and `DerefMut` ([C-DEREF](https://rust-lang.github.io/api-guidelines/predictability.html#c-deref))
-*   [ ] Constructors are static, inherent methods ([C-CTOR](https://rust-lang.github.io/api-guidelines/predictability.html#c-ctor))
+*   [x] Only smart pointers implement `Deref` and `DerefMut` ([C-DEREF](https://rust-lang.github.io/api-guidelines/predictability.html#c-deref))
+*   [x] Constructors are static, inherent methods ([C-CTOR](https://rust-lang.github.io/api-guidelines/predictability.html#c-ctor))
 
 ## Flexibility (crate supports diverse real-world use cases)
 
 *   [ ] Functions expose intermediate results to avoid duplicate work ([C-INTERMEDIATE](https://rust-lang.github.io/api-guidelines/flexibility.html#c-intermediate))
-*   [ ] Caller decides where to copy and place data ([C-CALLER-CONTROL](https://rust-lang.github.io/api-guidelines/flexibility.html#c-caller-control))
-*   [ ] Functions minimize assumptions about parameters by using generics ([C-GENERIC](https://rust-lang.github.io/api-guidelines/flexibility.html#c-generic))
+*   [x] Caller decides where to copy and place data ([C-CALLER-CONTROL](https://rust-lang.github.io/api-guidelines/flexibility.html#c-caller-control))
+*   [x] Functions minimize assumptions about parameters by using generics ([C-GENERIC](https://rust-lang.github.io/api-guidelines/flexibility.html#c-generic))
 *   [ ] Traits are object-safe if they may be useful as a trait object ([C-OBJECT](https://rust-lang.github.io/api-guidelines/flexibility.html#c-object))
 
 ## Type safety (crate leverages the type system effectively)
 
 *   [ ] Newtypes provide static distinctions ([C-NEWTYPE](https://rust-lang.github.io/api-guidelines/type-safety.html#c-newtype))
-*   [ ] Arguments convey meaning through types, not `bool` or `Option` ([C-CUSTOM-TYPE](https://rust-lang.github.io/api-guidelines/type-safety.html#c-custom-type))
+*   [x] Arguments convey meaning through types, not `bool` or `Option` ([C-CUSTOM-TYPE](https://rust-lang.github.io/api-guidelines/type-safety.html#c-custom-type))
 *   [ ] Types for a set of flags are `bitflags`, not enums ([C-BITFLAG](https://rust-lang.github.io/api-guidelines/type-safety.html#c-bitflag))
-*   [ ] Builders enable construction of complex values ([C-BUILDER](https://rust-lang.github.io/api-guidelines/type-safety.html#c-builder))
+*   [x] Builders enable construction of complex values ([C-BUILDER](https://rust-lang.github.io/api-guidelines/type-safety.html#c-builder))
 
 ## Dependability (crate is unlikely to do the wrong thing)
 

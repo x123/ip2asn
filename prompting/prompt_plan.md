@@ -212,7 +212,7 @@ documentation, and prepare the crate for its `v0.1.0` release on `crates.io`.
     *   **Task:** Audit the codebase against the "Interoperability" section (`C-COMMON-TRAITS`, `C-CONV-TRAITS`, `C-SEND-SYNC`, `C-GOOD-ERR`). Ensure the `Error` enum implements `std::error::Error`.
     *   **Task:** Perform a final review of the "Documentation" section (`C-CRATE-DOC`, `C-EXAMPLE`, `C-QUESTION-MARK`, `C-FAILURE`). Verify all public items are documented and examples are robust.
 
-*   **[ ] Chunk 6A.3: Predictability, Flexibility & Type Safety Audit**
+*   **[x] Chunk 6A.3: Predictability, Flexibility & Type Safety Audit**
     *   **Task:** Audit the codebase against the "Predictability" section (`C-METHOD`, `C-CTOR`, `C-DEREF`).
     *   **Task:** Audit the codebase against the "Flexibility" section (`C-CALLER-CONTROL`, `C-GENERIC`).
     *   **Task:** Audit the codebase against the "Type Safety" section (`C-BUILDER`, `C-CUSTOM-TYPE`).
