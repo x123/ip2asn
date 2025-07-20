@@ -223,7 +223,7 @@ documentation, and prepare the crate for its `v0.1.0` release on `crates.io`.
     *   **Task:** Audit the codebase against the "Future-Proofing" section (`C-STRUCT-PRIVATE`).
     *   **Task:** Audit the codebase against the "Necessities" section (`C-PERMISSIVE`) by running `cargo deny check`.
 
-*   **[ ] Chunk 6A.5: Final Linting & Cleanup**
+*   **[x] Chunk 6A.5: Final Linting & Cleanup**
     *   **Task:** Run `cargo clippy --all-targets --all-features -- -D warnings` and fix all reported lints.
     *   **Task:** Run `cargo test --all-features` one last time to ensure the audit and fixes have not introduced any regressions.
     *   **Task:** Delete the `prompting/api_review.md` audit file.
@@ -233,7 +233,6 @@ documentation, and prepare the crate for its `v0.1.0` release on `crates.io`.
 ### Phase 7: Publish
 
 * **[ ] Chunk 7.1: Final Review & Publish**
-    *   **Task:** Perform a final review of the entire API against the [Rust API Guidelines checklist](https://rust-lang.github.io/api-guidelines/checklist.html).
     *   **Task:** Run `cargo clippy -- -D warnings` and fix all lints.
     *   **Task:** Run `cargo test --all-features` one last time to ensure all tests pass.
     *   **Task:** Update `Cargo.toml` with the final `version = "0.1.0"`, authors, description, and repository link.

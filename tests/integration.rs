@@ -1,5 +1,5 @@
 use ip_network::IpNetwork;
-use ip2asn::{AsnInfoView, Builder, Error, IpAsnMap, ParseErrorKind, Warning};
+use ip2asn::{Builder, Error, IpAsnMap, ParseErrorKind, Warning};
 use std::net::Ipv4Addr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -22,39 +22,24 @@ fn test_builder_and_lookup() {
 
     // Case 1: IP in the middle of a range
     let result1 = map.lookup(Ipv4Addr::new(1, 0, 0, 100).into()).unwrap();
-    assert_eq!(
-        result1,
-        AsnInfoView {
-            network: "1.0.0.0/24".parse::<IpNetwork>().unwrap(),
-            asn: 13335,
-            country_code: "US",
-            organization: "CLOUDFLARENET",
-        }
-    );
+    assert_eq!(result1.network, "1.0.0.0/24".parse::<IpNetwork>().unwrap());
+    assert_eq!(result1.asn, 13335);
+    assert_eq!(result1.country_code, "US");
+    assert_eq!(result1.organization, "CLOUDFLARENET");
 
     // Case 2: IP at the start of a range
     let result2 = map.lookup(Ipv4Addr::new(1, 0, 1, 0).into()).unwrap();
-    assert_eq!(
-        result2,
-        AsnInfoView {
-            network: "1.0.1.0/24".parse::<IpNetwork>().unwrap(),
-            asn: 38040,
-            country_code: "AU",
-            organization: "GTELECOM",
-        }
-    );
+    assert_eq!(result2.network, "1.0.1.0/24".parse::<IpNetwork>().unwrap());
+    assert_eq!(result2.asn, 38040);
+    assert_eq!(result2.country_code, "AU");
+    assert_eq!(result2.organization, "GTELECOM");
 
     // Case 3: IP at the end of a range
     let result3 = map.lookup(Ipv4Addr::new(1, 0, 3, 255).into()).unwrap();
-    assert_eq!(
-        result3,
-        AsnInfoView {
-            network: "1.0.2.0/23".parse::<IpNetwork>().unwrap(),
-            asn: 38040,
-            country_code: "AU",
-            organization: "GTELECOM",
-        }
-    );
+    assert_eq!(result3.network, "1.0.2.0/23".parse::<IpNetwork>().unwrap());
+    assert_eq!(result3.asn, 38040);
+    assert_eq!(result3.country_code, "AU");
+    assert_eq!(result3.organization, "GTELECOM");
 
     // Case 4: IP not in any range
     let result4 = map.lookup(Ipv4Addr::new(127, 0, 0, 1).into());
@@ -62,15 +47,10 @@ fn test_builder_and_lookup() {
 
     // Case 5: Check interned string
     let result5 = map.lookup(Ipv4Addr::new(8, 8, 8, 8).into()).unwrap();
-    assert_eq!(
-        result5,
-        AsnInfoView {
-            network: "8.8.8.0/24".parse::<IpNetwork>().unwrap(),
-            asn: 15169,
-            country_code: "US",
-            organization: "GTELECOM",
-        }
-    );
+    assert_eq!(result5.network, "8.8.8.0/24".parse::<IpNetwork>().unwrap());
+    assert_eq!(result5.asn, 15169);
+    assert_eq!(result5.country_code, "US");
+    assert_eq!(result5.organization, "GTELECOM");
     // Check that the organization string is the same instance as result2
     assert_eq!(result2.organization, result5.organization);
 }
@@ -85,14 +65,12 @@ fn test_builder_from_path() {
         .unwrap();
     let result_plain = map_plain.lookup("154.16.226.100".parse().unwrap()).unwrap();
     assert_eq!(
-        result_plain,
-        AsnInfoView {
-            network: "154.16.226.0/24".parse().unwrap(),
-            asn: 61317,
-            country_code: "US",
-            organization: "ASDETUK www.heficed.com",
-        }
+        result_plain.network,
+        "154.16.226.0/24".parse::<IpNetwork>().unwrap()
     );
+    assert_eq!(result_plain.asn, 61317);
+    assert_eq!(result_plain.country_code, "US");
+    assert_eq!(result_plain.organization, "ASDETUK www.heficed.com");
 
     // Test with gzipped file
     let map_gz = Builder::new()
@@ -101,31 +79,30 @@ fn test_builder_from_path() {
         .build()
         .unwrap();
     let result_gz = map_gz.lookup("154.16.226.100".parse().unwrap()).unwrap();
-    assert_eq!(result_plain, result_gz);
+    assert_eq!(result_plain.network, result_gz.network);
+    assert_eq!(result_plain.asn, result_gz.asn);
+    assert_eq!(result_plain.country_code, result_gz.country_code);
+    assert_eq!(result_plain.organization, result_gz.organization);
 
     // Check an IPv6 address from the file
     let result_ipv6 = map_gz.lookup("2001:67c:2309::1".parse().unwrap()).unwrap();
     assert_eq!(
-        result_ipv6,
-        AsnInfoView {
-            network: "2001:67c:2309::/48".parse().unwrap(),
-            asn: 0,
-            country_code: "ZZ", // "None" is normalized to "ZZ"
-            organization: "Not routed",
-        }
+        result_ipv6.network,
+        "2001:67c:2309::/48".parse::<IpNetwork>().unwrap()
     );
+    assert_eq!(result_ipv6.asn, 0);
+    assert_eq!(result_ipv6.country_code, "ZZ");
+    assert_eq!(result_ipv6.organization, "Not routed");
 
     // Check a multi-word organization name
     let result_multi_word = map_plain.lookup("45.234.212.10".parse().unwrap()).unwrap();
     assert_eq!(
-        result_multi_word,
-        AsnInfoView {
-            network: "45.234.212.0/22".parse().unwrap(),
-            asn: 267373,
-            country_code: "BR",
-            organization: "AGIL TECOMUNICACOES LTDA",
-        }
+        result_multi_word.network,
+        "45.234.212.0/22".parse::<IpNetwork>().unwrap()
     );
+    assert_eq!(result_multi_word.asn, 267373);
+    assert_eq!(result_multi_word.country_code, "BR");
+    assert_eq!(result_multi_word.organization, "AGIL TECOMUNICACOES LTDA");
 }
 
 #[test]

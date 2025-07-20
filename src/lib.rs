@@ -10,10 +10,15 @@
 //! view of the ASN details. The crate provides detailed [`Error`] and [`Warning`]
 //! types for robust error handling.
 //!
+//! All public data structures are marked as `#[non_exhaustive]` to allow for
+//! future additions without breaking backward compatibility. This means you must
+//! use the `..` syntax in match patterns on enums and struct instantiations.
+//!
 //! # Quick Start
 //!
 //! ```rust
 //! use ip2asn::{Builder, IpAsnMap};
+//! use ip_network::IpNetwork;
 //! use std::net::IpAddr;
 //!
 //! fn main() -> Result<(), ip2asn::Error> {
@@ -28,7 +33,7 @@
 //!     // Perform a lookup.
 //!     let ip: IpAddr = "31.13.100.100".parse().unwrap();
 //!     if let Some(info) = map.lookup(ip) {
-//!         assert_eq!(info.network, "31.13.64.0/18".parse().unwrap());
+//!         assert_eq!(info.network, "31.13.64.0/18".parse::<IpNetwork>().unwrap());
 //!         assert_eq!(info.asn, 32934);
 //!         assert_eq!(info.country_code, "US");
 //!         assert_eq!(info.organization, "FACEBOOK-AS");
@@ -65,6 +70,7 @@ use std::path::Path;
 
 /// The primary error type for the crate.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum Error {
     /// An error occurred during an I/O operation.
     Io(std::io::Error),
@@ -128,6 +134,7 @@ impl From<reqwest::Error> for Error {
 
 /// A non-fatal warning for a skipped line during parsing.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum Warning {
     /// A line in the data source could not be parsed and was skipped.
     Parse {
@@ -171,6 +178,7 @@ impl fmt::Display for Warning {
 
 /// The specific kind of error that occurred during line parsing.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ParseErrorKind {
     /// The line did not have the expected number of columns.
     IncorrectColumnCount {
@@ -279,6 +287,16 @@ pub struct Builder<'a> {
     source: Option<Box<dyn BufRead + Send + 'a>>,
     strict: bool,
     on_warning: Option<Box<dyn Fn(Warning) + Send + 'a>>,
+}
+
+impl<'a> fmt::Debug for Builder<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Builder")
+            .field("source", &self.source.as_ref().map(|_| "Some(...)"))
+            .field("strict", &self.strict)
+            .field("on_warning", &self.on_warning.as_ref().map(|_| "Some(...)"))
+            .finish()
+    }
 }
 
 impl<'a> Builder<'a> {
@@ -430,6 +448,7 @@ impl<'a> Builder<'a> {
 /// A lightweight, read-only view into the ASN information for an IP address.
 /// This struct is returned by the `lookup` method.
 #[derive(Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct AsnInfoView<'a> {
     /// The matching IP network block for the looked-up address.
     pub network: IpNetwork,
