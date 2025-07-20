@@ -1,6 +1,23 @@
 use ip_network::IpNetwork;
 use std::net::IpAddr;
 
+/// Converts an inclusive IP address range into the smallest possible set of
+/// CIDR network blocks.
+///
+/// This function implements a "greedy" algorithm that finds the largest
+/// possible network block that starts at the beginning of the range and is
+/// contained within it, then repeats the process for the remainder of the range.
+///
+/// # Arguments
+///
+/// * `start` - The starting `IpAddr` of the range.
+/// * `end` - The ending `IpAddr` of the range.
+///
+/// # Returns
+///
+/// A `Vec<IpNetwork>` containing the CIDR blocks. Returns an empty vector if
+/// the `start` address is greater than the `end` address, or if the IP
+/// address families do not match.
 #[allow(dead_code)]
 pub fn range_to_cidrs(start: IpAddr, end: IpAddr) -> Vec<IpNetwork> {
     macro_rules! define_range_to_cidrs_impl {

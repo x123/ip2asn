@@ -12,7 +12,10 @@
 ///   full organization name. This avoids storing duplicate strings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct AsnRecord {
+    /// The Autonomous System Number.
     pub asn: u32,
+    /// A 2-byte array representing the ISO 3166-1 alpha-2 country code.
     pub country_code: [u8; 2],
+    /// An index into a string interning table for the organization name.
     pub organization_idx: u32,
 }

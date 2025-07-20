@@ -1,6 +1,40 @@
+#![deny(missing_docs)]
+//! A high-performance, memory-efficient Rust crate for mapping IP addresses to
+//! Autonomous System (AS) information with sub-microsecond lookups.
+//!
+//! # Quick Start
+//!
+//! ```rust
+//! use ip2asn::{Builder, IpAsnMap};
+//! use std::net::IpAddr;
+//!
+//! fn main() -> Result<(), ip2asn::Error> {
+//!     // A small, in-memory TSV data source for the example.
+//!     let data = "31.13.64.0\t31.13.127.255\t32934\tUS\tFACEBOOK-AS";
+//!
+//!     // Build the map from a source that implements `io::Read`.
+//!     let map = Builder::new()
+//!         .with_source(data.as_bytes())?
+//!         .build()?;
+//!
+//!     // Perform a lookup.
+//!     let ip: IpAddr = "31.13.100.100".parse().unwrap();
+//!     if let Some(info) = map.lookup(ip) {
+//!         assert_eq!(info.asn, 32934);
+//!         assert_eq!(info.country_code, "US");
+//!         assert_eq!(info.organization, "FACEBOOK-AS");
+//!         println!("{ip} -> AS{}: {} ({})", info.asn, info.organization, info.country_code);
+//!     }
+//!
+//!     Ok(())
+//! }
+//! ```
 mod interner;
+/// Line-by-line parsing logic for IP-to-ASN data.
 pub mod parser;
+/// IP range to CIDR conversion logic.
 pub mod range;
+/// Core data structures for ASN records.
 pub mod types;
 
 use crate::interner::StringInterner;
@@ -27,8 +61,11 @@ pub enum Error {
 
     /// A line in the data source was malformed (only in strict mode).
     Parse {
+        /// The 1-based line number where the error occurred.
         line_number: usize,
+        /// The content of the line that failed to parse.
         line_content: String,
+        /// The specific type of parsing error.
         kind: ParseErrorKind,
     },
 }
@@ -38,31 +75,58 @@ pub enum Error {
 pub enum Warning {
     /// A line in the data source could not be parsed and was skipped.
     Parse {
+        /// The 1-based line number where the warning occurred.
         line_number: usize,
+        /// The content of the line that was skipped.
         line_content: String,
+        /// A message describing the parse error.
         message: String,
     },
     /// A line contained a start IP and end IP of different families.
     IpFamilyMismatch {
+        /// The 1-based line number where the warning occurred.
         line_number: usize,
+        /// The content of the line that was skipped.
         line_content: String,
     },
 }
 
+/// The specific kind of error that occurred during line parsing.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseErrorKind {
     /// The line did not have the expected number of columns.
-    IncorrectColumnCount { expected: usize, found: usize },
+    IncorrectColumnCount {
+        /// The expected number of columns.
+        expected: usize,
+        /// The actual number of columns found.
+        found: usize,
+    },
     /// A field could not be parsed as a valid IP address.
-    InvalidIpAddress { field: String, value: String },
+    InvalidIpAddress {
+        /// The name of the field that failed parsing (e.g., "start_ip").
+        field: String,
+        /// The value that could not be parsed.
+        value: String,
+    },
     /// The ASN field could not be parsed as a valid number.
-    InvalidAsnNumber { value: String },
+    InvalidAsnNumber {
+        /// The value that could not be parsed as an ASN.
+        value: String,
+    },
     /// The start IP address was greater than the end IP address.
-    InvalidRange { start_ip: IpAddr, end_ip: IpAddr },
+    InvalidRange {
+        /// The start IP of the invalid range.
+        start_ip: IpAddr,
+        /// The end IP of the invalid range.
+        end_ip: IpAddr,
+    },
     /// The start and end IPs were of different families.
     IpFamilyMismatch,
     /// The country code was not a 2-character string.
-    InvalidCountryCode { value: String },
+    InvalidCountryCode {
+        /// The value that could not be parsed as a country code.
+        value: String,
+    },
 }
 
 /// A read-optimized, in-memory map for IP address to ASN lookups.
@@ -81,7 +145,17 @@ impl fmt::Debug for IpAsnMap {
 }
 
 impl IpAsnMap {
+    /// Creates a new `Builder` for constructing an `IpAsnMap`.
+    ///
+    /// This is a convenience method equivalent to `Builder::new()`.
+    pub fn builder() -> Builder<'static> {
+        Builder::new()
+    }
+
     /// Looks up an IP address, returning a view into its ASN information if found.
+    ///
+    /// The lookup is a longest-prefix match, ensuring the most specific
+    /// network range is returned.
     pub fn lookup(&self, ip: IpAddr) -> Option<AsnInfoView> {
         self.table.longest_match(ip).map(|(_, record)| {
             let organization = &self.organizations[record.organization_idx as usize];
@@ -118,10 +192,15 @@ impl<'a> Builder<'a> {
         Ok(self)
     }
 
-    /// Creates a new builder that will read data from the given source.
-    pub fn with_source(mut self, source: impl BufRead + Send + 'a) -> Self {
-        self.source = Some(Box::new(source));
-        self
+    /// Configures the builder to load data from a source implementing `BufRead`.
+    ///
+    /// This is the most flexible way to provide data, accepting any reader,
+    /// such as an in-memory buffer or a network stream.
+    ///
+    /// Gzip decompression is handled automatically by inspecting the stream's magic bytes.
+    pub fn with_source(mut self, source: impl BufRead + Send + 'a) -> Result<Self, Error> {
+        self.source = Some(self.create_source_from_reader(source)?);
+        Ok(self)
     }
 
     /// Configures the builder to load data from a URL.
@@ -244,7 +323,10 @@ impl<'a> Builder<'a> {
 /// This struct is returned by the `lookup` method.
 #[derive(Debug, PartialEq, Eq)]
 pub struct AsnInfoView<'a> {
+    /// The Autonomous System Number (ASN).
     pub asn: u32,
+    /// The two-letter ISO 3166-1 alpha-2 country code.
     pub country_code: &'a str,
+    /// The common name of the organization that owns the IP range.
     pub organization: &'a str,
 }

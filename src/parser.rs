@@ -7,13 +7,26 @@ use std::str::FromStr;
 /// A temporary struct holding the successfully parsed fields from a data line.
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParsedLine<'a> {
+    /// The start of the IP address range.
     pub start_ip: IpAddr,
+    /// The end of the IP address range.
     pub end_ip: IpAddr,
+    /// The Autonomous System Number (ASN).
     pub asn: u32,
+    /// The two-letter ISO 3166-1 alpha-2 country code.
     pub country_code: [u8; 2],
+    /// The common name of the organization that owns the IP range.
     pub organization: &'a str,
 }
 
+/// Parses a single line of tab-separated `ip2asn` data.
+///
+/// The expected format is: `START_IP\tEND_IP\tASN\tCOUNTRY_CODE\tORGANIZATION`
+///
+/// # Errors
+///
+/// Returns a `ParseErrorKind` if the line is malformed, such as having an
+/// incorrect number of columns, invalid IP addresses, or an invalid range.
 pub fn parse_line(line: &str) -> Result<ParsedLine, ParseErrorKind> {
     const EXPECTED_COLUMNS: usize = 5;
     let parts: Vec<&str> = line.split('\t').collect();
