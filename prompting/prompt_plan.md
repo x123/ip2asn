@@ -10,7 +10,7 @@ chunk within a phase represents a small, testable unit of work.
 
 **Goal:** Create a rock-solid, standalone utility for converting IP ranges to CIDR prefixes. This is the most complex algorithmic piece and has no other project dependencies, making it the ideal starting point.
 
-* **[ ] Chunk 1.1: Project Scaffolding**
+* **[x] Chunk 1.1: Project Scaffolding**
     * **Task:** Initialize the Rust library project (`cargo new --lib ip2asn`).
     * **Task:** Add initial dependencies to `Cargo.toml`: `ip_network` for IP address manipulation.
     * **Task:** Set up the basic module structure in `src/lib.rs` and create a private `range.rs` module for the new logic.

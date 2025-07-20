@@ -1,0 +1,8 @@
+[package]
+name = "ip2asn"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+ip_network = "0.4.1"

@@ -1,0 +1,23 @@
+# See https://embarkstudios.github.io/cargo-deny/checks/licenses/configuration.html
+[licenses]
+version = 2
+# List of licenses to accept.
+# All licenses not in this list will be rejected.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause", # For ip_network
+]
+
+# See https://embarkstudios.github.io/cargo-deny/checks/bans/configuration.html
+[bans]
+# It's not always easy to get all crates to use the same version.
+multiple-versions = "allow"
+# Certain crates/versions are not allowed.
+wildcards = "warn"
+
+[advisories]
+version = 2
+# The database to use for advisories.
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
