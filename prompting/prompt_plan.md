@@ -137,22 +137,51 @@ implements the I/O methods on the `Builder` as defined in the specification.
 
 ### **Phase 5: Final Polish & Release Prep** ✨
 
-**Goal:** Finalize documentation, add benchmarks, and ensure the crate is ready for publishing.
+**Goal:** Harden the library by implementing final error-handling features,
+verify performance goals with a comprehensive benchmark suite, write thorough
+documentation, and prepare the crate for its `v0.1.0` release on `crates.io`.
 
-* **[ ] Chunk 5.1: Warning & Strict Mode**
-    * **TDD: Write failing tests** for `builder.strict()` and `builder.on_warning()`. Assert that `strict()` mode returns an `Err` on bad data and that resilient mode calls the warning callback.
-    * **Task:** Implement the final logic for strict mode and the warning callback hook.
+* **[x] Chunk 5.1: Harden Error Handling & Final Features**
+    *   **Task:** In `src/lib.rs`, add a `strict: bool` field and an `on_warning: Option<Box<dyn Fn(Warning)>>` field to the `Builder` struct.
+    *   **Task:** Implement the public `Builder::strict(self) -> Self` and `Builder::on_warning(self, callback: F) -> Self` methods.
+    *   **TDD: Write a failing integration test** for strict mode. The test should:
+        1.  Use `Builder::from_source()` with data containing a single malformed line.
+        2.  Call `.strict()` on the builder.
+        3.  Call `.build()` and assert that it returns an `Err(Error::Parse { ... })`.
+    *   **TDD: Write a failing integration test** for the warning callback. The test should:
+        1.  Use `Builder::from_source()` with data containing several malformed lines.
+        2.  Use a shared counter (e.g., `Arc<AtomicUsize>`) and configure an `on_warning` callback that increments it.
+        3.  Call `.build()` and assert it returns `Ok`.
+        4.  Assert that the counter's final value equals the number of malformed lines.
+    *   **Task:** Modify the main loop in `Builder::build`. If a line fails to parse:
+        1.  If `self.strict` is `true`, immediately return the `Error::Parse`.
+        2.  If `self.strict` is `false`, check for an `on_warning` callback. If present, invoke it with the `Warning`.
+        3.  Continue to the next line.
+    *   **Task:** Ensure all tests pass.
 
-* **[ ] Chunk 5.2: Benchmarking**
-    * **Task:** Add `criterion` as a dev-dependency.
-    * **Task:** Create a `benches` directory and implement the benchmark suite covering build time and all specified lookup scenarios.
+* **[ ] Chunk 5.2: Verify Performance Contract**
+    *   **Task:** Add `criterion` as a `dev-dependency` in `Cargo.toml` and disable its default features.
+    *   **Task:** Create a `benches/` directory with a `main.rs` file.
+    *   **Task:** Download a large, real-world `ip2asn` dataset (e.g., from `iptoasn.com`) and place it in a `testdata/` subdirectory that is gitignored.
+    *   **Task:** Implement the benchmark suite as defined in `spec.md`:
+        1.  **`build_benchmark`**: Measures the time to build the `IpAsnMap` from the large dataset file.
+        2.  **`lookup_ipv4_hit_benchmark`**: Measures lookup speed for a random sample of IPv4 addresses known to be in the dataset.
+        3.  **`lookup_ipv6_hit_benchmark`**: Measures lookup speed for a random sample of IPv6 addresses.
+        4.  **`lookup_miss_benchmark`**: Measures lookup speed for addresses known *not* to be in the dataset (e.g., private ranges, reserved addresses).
+    *   **Task:** Run `cargo bench` and analyze the results. Ensure the lookup performance meets the `< 500ns` goal specified in `spec.md`.
 
-* **[ ] Chunk 5.3: Documentation**
-    * **Task:** Write comprehensive crate-level documentation in `src/lib.rs`.
-    * **Task:** Add the detailed usage examples for `tokio` and `smol`.
-    * **Task:** Run `cargo doc` and ensure all public APIs are documented with clear explanations and examples.
+* **[ ] Chunk 5.3: Document the Final Product**
+    *   **Task:** Write comprehensive crate-level documentation (`//!`) in `src/lib.rs`. This should cover the crate's purpose, core concepts, features (`fetch`), and a basic usage example.
+    *   **Task:** Write detailed documentation for every public item (`IpAsnMap`, `Builder`, `AsnInfoView`, `Error`, and all their public methods), including examples where appropriate.
+    *   **Task:** Add the full, runnable async usage examples for both `tokio` and `smol` to the crate-level documentation, as specified in `spec.md`.
+    *   **Task:** Create a high-quality `README.md` file for the GitHub repository, including badges (`crates.io`, `docs.rs`), a summary, usage examples, and a note on performance.
+    *   **Task:** Run `cargo doc --open` to preview the generated documentation and fix any rendering issues or missing items.
 
 * **[ ] Chunk 5.4: Final Review & Publish**
-    * **Task:** Review the entire API against the Rust API Guidelines checklist.
-    * **Task:** Do a final `cargo check`, `cargo test`, and `cargo clippy -- -D warnings` run.
-    * **Task:** Publish version `0.1.0` to `crates.io`.
+    *   **Task:** Perform a final review of the entire API against the [Rust API Guidelines checklist](https://rust-lang.github.io/api-guidelines/checklist.html).
+    *   **Task:** Run `cargo clippy -- -D warnings` and fix all lints.
+    *   **Task:** Run `cargo test --all-features` one last time to ensure all tests pass.
+    *   **Task:** Update `Cargo.toml` with the final `version = "0.1.0"`, authors, description, and repository link.
+    *   **Task:** Perform a dry run of publishing with `cargo publish --dry-run`.
+    *   **Task:** (User action) Log in to `crates.io` with `cargo login`.
+    *   **Task:** (User action) Publish the crate with `cargo publish`.

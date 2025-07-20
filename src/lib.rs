@@ -49,7 +49,7 @@ pub enum Warning {
     },
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParseErrorKind {
     /// The line did not have the expected number of columns.
     IncorrectColumnCount { expected: usize, found: usize },
@@ -98,6 +98,8 @@ impl IpAsnMap {
 #[derive(Default)]
 pub struct Builder<'a> {
     source: Option<Box<dyn BufRead + Send + 'a>>,
+    strict: bool,
+    on_warning: Option<Box<dyn Fn(Warning) + Send + 'a>>,
 }
 
 impl<'a> Builder<'a> {
@@ -109,17 +111,17 @@ impl<'a> Builder<'a> {
     /// Configures the builder to load data from a file path.
     ///
     /// Gzip decompression is handled automatically by inspecting the file's magic bytes.
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+    pub fn from_path<P: AsRef<Path>>(mut self, path: P) -> Result<Self, Error> {
         let file = File::open(path.as_ref()).map_err(Error::Io)?;
         let reader = BufReader::new(file);
-        Self::create_source_from_reader(reader)
+        self.source = Some(self.create_source_from_reader(reader)?);
+        Ok(self)
     }
 
     /// Creates a new builder that will read data from the given source.
-    pub fn with_source(source: impl BufRead + Send + 'a) -> Self {
-        Self {
-            source: Some(Box::new(source)),
-        }
+    pub fn with_source(mut self, source: impl BufRead + Send + 'a) -> Self {
+        self.source = Some(Box::new(source));
+        self
     }
 
     /// Configures the builder to load data from a URL.
@@ -127,14 +129,35 @@ impl<'a> Builder<'a> {
     /// This method is only available when the `fetch` feature is enabled.
     /// Gzip decompression is handled automatically by inspecting the stream's magic bytes.
     #[cfg(feature = "fetch")]
-    pub fn from_url(url: &str) -> Result<Self, Error> {
+    pub fn from_url(mut self, url: &str) -> Result<Self, Error> {
         let response = reqwest::blocking::get(url).map_err(Error::Http)?;
         let response = response.error_for_status().map_err(Error::Http)?;
         let reader = BufReader::new(response);
-        Self::create_source_from_reader(reader)
+        self.source = Some(self.create_source_from_reader(reader)?);
+        Ok(self)
     }
 
-    fn create_source_from_reader(mut reader: impl BufRead + Send + 'a) -> Result<Self, Error> {
+    /// Enables strict parsing mode.
+    ///
+    /// If called, `build()` will return an `Err` on the first parse failure.
+    pub fn strict(mut self) -> Self {
+        self.strict = true;
+        self
+    }
+
+    /// Sets a callback function to be invoked for each skipped line in resilient mode.
+    pub fn on_warning<F>(mut self, callback: F) -> Self
+    where
+        F: Fn(Warning) + Send + 'a,
+    {
+        self.on_warning = Some(Box::new(callback));
+        self
+    }
+
+    fn create_source_from_reader(
+        &self,
+        mut reader: impl BufRead + Send + 'a,
+    ) -> Result<Box<dyn BufRead + Send + 'a>, Error> {
         let is_gzipped = {
             let header = reader.fill_buf().map_err(Error::Io)?;
             header.starts_with(&[0x1f, 0x8b])
@@ -146,9 +169,7 @@ impl<'a> Builder<'a> {
             Box::new(reader)
         };
 
-        Ok(Self {
-            source: Some(source),
-        })
+        Ok(source)
     }
 
     /// Builds the `IpAsnMap`, consuming the builder.
@@ -163,11 +184,39 @@ impl<'a> Builder<'a> {
         let mut interner = StringInterner::new();
         let mut table = IpNetworkTable::new();
 
-        for line_result in source.lines() {
+        for (i, line_result) in source.lines().enumerate() {
+            let line_number = i + 1;
             let line = line_result.map_err(Error::Io)?;
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+
             let parsed: ParsedLine = match parse_line(&line) {
                 Ok(p) => p,
-                Err(_) => continue, // For now, skip errors.
+                Err(kind) => {
+                    if self.strict {
+                        return Err(Error::Parse {
+                            line_number,
+                            line_content: line,
+                            kind,
+                        });
+                    } else if let Some(callback) = &self.on_warning {
+                        let warning = if kind == ParseErrorKind::IpFamilyMismatch {
+                            Warning::IpFamilyMismatch {
+                                line_number,
+                                line_content: line,
+                            }
+                        } else {
+                            Warning::Parse {
+                                line_number,
+                                line_content: line,
+                                message: format!("{kind:?}"),
+                            }
+                        };
+                        callback(warning);
+                    }
+                    continue;
+                }
             };
 
             let org_idx = interner.get_or_intern(parsed.organization);
