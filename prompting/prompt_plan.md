@@ -232,7 +232,7 @@ documentation, and prepare the crate for its `v0.1.0` release on `crates.io`.
 
 ### Phase 7: Publish
 
-* **[ ] Chunk 7.1: Final Review & Publish**
+* **[x] Chunk 7.1: Final Review & Publish**
     *   **Task:** Run `cargo clippy -- -D warnings` and fix all lints.
     *   **Task:** Run `cargo test --all-features` one last time to ensure all tests pass.
     *   **Task:** Update `Cargo.toml` with the final `version = "0.1.0"`, authors, description, and repository link.
