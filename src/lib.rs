@@ -31,10 +31,6 @@ pub enum Error {
         line_content: String,
         kind: ParseErrorKind,
     },
-
-    /// An error occurred during serialization or deserialization of the map.
-    #[cfg(feature = "serde")]
-    Serialization(String),
 }
 
 /// A non-fatal warning for a skipped line during parsing.
@@ -198,7 +194,6 @@ impl<'a> Builder<'a> {
 /// A lightweight, read-only view into the ASN information for an IP address.
 /// This struct is returned by the `lookup` method.
 #[derive(Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct AsnInfoView<'a> {
     pub asn: u32,
     pub country_code: &'a str,

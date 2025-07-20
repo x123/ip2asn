@@ -104,10 +104,9 @@ Excellent. Here is the detailed plan for Phase 4, formatted for `prompt_plan.md`
 
 ### **Phase 4: I/O, Features, and Ergonomics** 🔌
 
-**Goal:** Add support for file/network I/O and the optional `serde` and `fetch`
-features, making the library robust and easy to use in production environments.
-This phase implements the I/O methods on the `Builder` and serialization
-methods on the `IpAsnMap` as defined in the specification.
+**Goal:** Add support for file/network I/O and the optional `fetch` feature,
+making the library robust and easy to use in production environments. This phase
+implements the I/O methods on the `Builder` as defined in the specification.
 
 *   **[x] Chunk 4.1: File I/O & Gzip Decompression**
     *   **Task:** Add `flate2` as a dependency.
@@ -133,17 +132,6 @@ methods on the `IpAsnMap` as defined in the specification.
         3.  The response body from `reqwest` is a reader. Buffer it, then apply the same gzip magic-byte detection logic from Chunk 4.1 to transparently decompress the stream.
     *   **Task:** Ensure the `wiremock` test passes.
 
-*   **[ ] Chunk 4.3: `serde` Feature & Serialization**
-    *   **Task:** Add `postcard` and `serde` (with the `derive` feature) to `Cargo.toml`.
-    *   **Task:** Add `#[derive(Serialize, Deserialize)]` to `IpAsnMap` and its internal components (`AsnRecord`, etc.). Note that `IpNetworkTable` already supports `serde`.
-    *   **TDD: Write a failing integration test, gated by `#[cfg(feature = "serde")]`.** The test should:
-        1.  Build an `IpAsnMap` from a test file.
-        2.  Call a new `map.to_bytes()` method and assert it succeeds.
-        3.  Call a new `IpAsnMap::from_bytes()` with the resulting byte slice and assert it fails.
-    *   **Task:** Implement `IpAsnMap::to_bytes(&self) -> Result<Vec<u8>, Error>` using `postcard::to_allocvec`.
-    *   **Task:** Implement `IpAsnMap::from_bytes(bytes: &[u8]) -> Result<Self, Error>` using `postcard::from_bytes`.
-    *   **Task:** Update the `Error` enum with a `Serialization(String)` variant to wrap errors from `postcard`.
-    *   **Task:** Refine the test to assert that a lookup on the deserialized map returns the exact same `AsnInfoView` as a lookup on the original map.
 
 ---
 

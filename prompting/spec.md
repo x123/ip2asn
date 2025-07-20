@@ -38,7 +38,6 @@ pub struct Builder { /* private fields */ }
 /// A lightweight, read-only view into the ASN information for an IP address.
 /// This struct is returned by the `lookup` method.
 #[derive(Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct AsnInfoView<'a> {
     pub asn: u32,
     pub country_code: &'a str,
@@ -72,20 +71,6 @@ impl IpAsnMap {
         // ...
     }
 
-    /// Serializes the map to a writer using the Postcard format.
-    /// This method is only available if the `serde` feature is enabled.
-    #[cfg(feature = "serde")]
-    pub fn serialize<W: std::io::Write>(&self, writer: W) -> Result<(), Error> {
-        // ...
-    }
-
-    /// Deserializes a map from a reader using the Postcard format.
-    /// This is much faster than building from a text source.
-    /// This method is only available if the `serde` feature is enabled.
-    #[cfg(feature = "serde")]
-    pub fn deserialize<R: std::io::Read>(reader: R) -> Result<Self, Error> {
-        // ...
-    }
 }
 ```
 
@@ -188,9 +173,6 @@ pub enum Error {
         kind: ParseErrorKind,
     },
 
-    /// An error occurred during serialization or deserialization of the map.
-    #[cfg(feature = "serde")]
-    Serialization(String),
 }
 
 #[derive(Debug)]
@@ -236,14 +218,6 @@ pub enum Warning {
       * Enables the `builder.with_url()` method.
 	  * Adds a dependency on `reqwest`, using its `blocking` client to ensure
 		the crate remains runtime-agnostic.
-  * `serde`:
-	  * **Primary Purpose**: Enables serializing (`IpAsnMap::serialize`) and
-		deserializing (`IpAsnMap::deserialize`) the entire `IpAsnMap` structure. This
-		allows for near-instant startup after an initial, one-time `build()` process.
-	  * **Format**: The **Postcard** format will be used to ensure
-		cross-platform portability (amd64, arm64).
-	  * **Secondary Purpose**: Provides `#[derive(Serialize)]` for the
-		`AsnInfoView` struct.
 
 -----
 

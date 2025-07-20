@@ -642,7 +642,6 @@ dependencies = [
  "ip_network",
  "ip_network_table",
  "reqwest",
- "serde",
  "tokio",
  "wiremock",
 ]
