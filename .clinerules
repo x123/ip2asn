@@ -1,0 +1,111 @@
+# **`ip2asn` Crate Development Rules**
+
+This document outlines the core principles, workflows, and coding standards for the `ip2asn` crate. Adherence to these rules is mandatory to ensure code quality, consistency, and maintainability.
+
+-----
+
+## **1. Guiding Principles**
+
+### **1.1. Project Hygiene**
+
+  * **No Artifacts:** Do not commit build artifacts, logs, or other generated files.
+  * **Simplicity Over Complexity:** Prefer simple, clear code. Less code is better.
+  * **Rewrite Over Add:** Refactor existing components to meet new requirements instead of adding duplicative ones.
+  * **Flag Obsolete Code:** Explicitly mark obsolete code for deletion in a commit or follow-up task.
+
+### **1.2. Version Control**
+
+  * **Conventional Commits:** All commit messages MUST follow the Conventional Commits specification (`type(scope): subject`) and the 50/72 rule.
+
+    ```text
+    feat(parser): Add country code normalization
+
+    Implement the logic to normalize non-standard country codes like
+    "None" and "Unknown" to the "ZZ" user-assigned ISO code during
+    the data ingestion phase.
+    ```
+
+-----
+
+## **2. Agent Development Protocol (Roo Code)**
+
+As the AI developer, Roo MUST strictly follow this protocol for all tasks:
+
+1.  **Understand & Plan:** Before coding, state your understanding of the task. Read `spec.md` and `prompt_plan.md` for implementation details.
+2.  **Test-Driven Development (TDD):** Create or update tests that fail before implementing the feature.
+3.  **Implement:** Write the code to fulfill the task requirements.
+4.  **Lint & Format:** Run `just lint` and fix all warnings and formatting issues.
+5.  **Test & Debug:** Run the full test suite with `just test` or `just test-debug` (for individual tests with verbose tracing output). If tests fail, add `debug!` tracing and resolve all failures.
+6.  **Journal:** If any significant challenges were faced or significant decisions were made, make a concise note of them in `journal.md`.
+7.  **README.md:** If any changes require updates to the `README.md`, you MUST make them.
+8.  **Update Plan:** Mark the task as complete (`[x]`) in `prompt_plan.md`.
+9.  **Update Spec:** If significant changes have been made that are materially different than `spec.md`, update the document and request a review.
+10. **Propose Commit:** Suggest a well-structured commit message.
+11. **Await Approval:** Do not proceed to the next task until the user has approved the changes.
+
+-----
+
+## **3. Testing Strategy**
+
+All tests must be robust, deterministic, and maintainable.
+
+  * **Integration Tests:**
+      * **Use In-Memory Sources:** Prefer using `Builder::with_source` with in-memory byte slices (`&[u8]`) for integration tests to keep them fast and isolated from the filesystem.
+      * **Hermetic I/O:** For tests involving the `fetch` feature, all external HTTP requests MUST be mocked (e.g., with `wiremock`) to create a controlled, deterministic environment.
+      * **Debugging:** To capture `tracing` output in tests, initialize the subscriber within the test body using `tracing_subscriber::fmt().with_test_writer().try_init()`.
+  * **Unit Tests:**
+      * **Location:** Place unit tests in a `#[cfg(test)] mod tests { ... }` block within the same file as the code they test.
+      * **Focus:** Unit tests should focus on pure logic, such as the `range_to_cidrs` algorithm or the line parser.
+  * **Benchmark Tests:**
+      * **Tool:** Use the `criterion` crate for all performance benchmarks.
+      * **Data:** Benchmarks should run against a realistic, sizable dataset stored within the repository.
+
+-----
+
+## **4. Dependencies & Tooling**
+
+  * **Dependency Hygiene:** Ensure any new dependencies comply with the `deny.toml` rules and pass `cargo-deny` checks. Do not add dependencies unnecessarily.
+  * **Core Dependencies:** The project relies on a minimal, specific set of dependencies:
+      * `ip_network`: For core CIDR and IP range logic.
+      * `flate2`: For transparent gzip decompression.
+      * `reqwest` (with `blocking` feature): For the optional `fetch` feature.
+      * `postcard` & `serde`: For the optional `serde` serialization feature.
+      * `criterion`: For benchmarking (as a `dev-dependency`).
+  * **API Verification:** Do not guess API names or behavior. Verify them against authoritative documentation (e.g., `docs.rs`).
+
+-----
+
+## **5. Rust Coding Standards**
+
+### **5.1. API & Type Design**
+
+  * **Arguments:** Prefer borrowed types (`&str`, `&[T]`) over owned types (`String`, `Vec<T>`) for function arguments.
+  * **Construction:** Use the Builder pattern for complex struct initialization.
+  * **Type Safety:** Use the newtype pattern (`struct Asn(u32)`) where appropriate to create distinct types from primitives.
+  * **Resource Management:** Use the RAII pattern ("guards") for resources requiring explicit cleanup.
+
+### **5.2. Async Compatibility & Error Handling**
+
+  * **Propagate Errors:** Use `Result<T, E>` and the `?` operator. Do not hide or ignore errors.
+  * **Runtime-Agnostic Core:** The library's public API MUST remain **synchronous** and runtime-agnostic. All I/O operations (file reading, HTTP requests) will be blocking.
+  * **Async Examples:** Documentation for async integration MUST show the idiomatic pattern of wrapping the blocking `build()` call in the runtime's designated function (e.g., `tokio::task::spawn_blocking`, `smol::unblock`).
+
+### **5.3. Code Structure & Safety**
+
+  * **`unsafe` Code:** Encapsulate `unsafe` blocks in a minimal module with a safe API. Justify every `unsafe` block with a `// SAFETY:` comment explaining why it is sound.
+  * **Decompose Structs:** Break down large structs to simplify logic and resolve borrow-checker issues.
+
+### **5.4. Anti-Patterns to Avoid**
+
+  * **Do not `.clone()` to fix borrow errors.** Refactor lifetimes or ownership first.
+  * **Do not use `Deref` to simulate inheritance.**
+  * **Do not use `#![deny(warnings)]` in library crates**, as it can break downstream builds.
+
+-----
+
+## **6. Project Structure**
+
+  * **Module Organization:** Use `mod.rs` as the entry point for each module directory.
+      * `src/parser/mod.rs`
+      * `src/interner/mod.rs`
+  * **Shared Test Helpers:** Place all shared test code (e.g., test data generators, temporary file helpers) in the `tests/helpers/` directory.

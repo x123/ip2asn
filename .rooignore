@@ -1,0 +1,7 @@
+.direnv/
+data/
+.git/
+flake.lock
+result
+target/
+.DS_Store

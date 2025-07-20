@@ -1,0 +1,9 @@
+.DS_Store
+.direnv/
+.roo/
+data/
+flake.lock
+result
+# Added by cargo
+/target
+/.cargo
