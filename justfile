@@ -44,3 +44,7 @@ install-audit:
 # install cargo-textest
 install-nextest:
     @cargo install cargo-nextest --locked
+
+# Run benchmarks
+bench *extra_args:
+    @cargo bench --all-features {{extra_args}}

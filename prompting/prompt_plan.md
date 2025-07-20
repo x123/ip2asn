@@ -159,7 +159,7 @@ documentation, and prepare the crate for its `v0.1.0` release on `crates.io`.
         3.  Continue to the next line.
     *   **Task:** Ensure all tests pass.
 
-* **[ ] Chunk 5.2: Verify Performance Contract**
+* **[x] Chunk 5.2: Verify Performance Contract**
     *   **Task:** Add `criterion` as a `dev-dependency` in `Cargo.toml` and disable its default features.
     *   **Task:** Create a `benches/` directory with a `main.rs` file.
     *   **Task:** Download a large, real-world `ip2asn` dataset (e.g., from `iptoasn.com`) and place it in a `testdata/` subdirectory that is gitignored.

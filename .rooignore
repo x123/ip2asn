@@ -6,3 +6,5 @@ result
 target/
 .DS_Store
 /.cargo
+testdata/ip2asn-combined.tsv
+testdata/ip2asn-combined.tsv.gz

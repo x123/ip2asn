@@ -13,6 +13,11 @@ reqwest = { version = "0.12.5", features = ["blocking"], optional = true }
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 wiremock = "0.6.0"
+criterion = { version = "0.6.0", features = ["html_reports"] }
 
 [features]
 fetch = ["dep:reqwest"]
+
+[[bench]]
+name = "lookup_benchmark"
+harness = false
