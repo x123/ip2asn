@@ -1,14 +1,15 @@
-mod range;
-mod types;
+pub mod parser;
+pub mod range;
+pub mod types;
 
 use std::net::IpAddr;
 
 /// A read-optimized, in-memory map for IP address to ASN lookups.
 /// Construction is handled by the `Builder`.
-pub struct IpAsnMap { /* private fields */ }
+pub struct IpAsnMap {/* private fields */}
 
 /// A builder for configuring and loading an `IpAsnMap`.
-pub struct Builder { /* private fields */ }
+pub struct Builder {/* private fields */}
 
 /// A lightweight, read-only view into the ASN information for an IP address.
 /// This struct is returned by the `lookup` method.
@@ -50,6 +51,8 @@ pub enum ParseErrorKind {
     InvalidRange { start_ip: IpAddr, end_ip: IpAddr },
     /// The start and end IPs were of different families.
     IpFamilyMismatch,
+    /// The country code was not a 2-character string.
+    InvalidCountryCode { value: String },
 }
 
 /// A non-fatal warning for a skipped line during parsing.

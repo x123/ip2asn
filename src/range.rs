@@ -206,7 +206,7 @@ mod tests {
     }
 
     #[test]
-    fn test_from_real_data() {
+    fn test_range_to_cidrs_from_real_data() {
         // From testdata/testdata-small-ip2asn.tsv
         // Sample 1: 38.103.144.0    38.103.149.255
         let start_v4_1 = IpAddr::V4(Ipv4Addr::new(38, 103, 144, 0));

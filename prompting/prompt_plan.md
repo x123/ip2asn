@@ -40,7 +40,7 @@ chunk within a phase represents a small, testable unit of work.
     * **Task:** Create a new `src/types.rs` module and declare it in `src/lib.rs`.
     * **Task:** In `src/types.rs`, define the *internal*, optimized `AsnRecord` struct that will be stored in the lookup table. This struct will hold the ASN, a `[u8; 2]` for the country code, and a `u32` for the interned organization string index.
 
-* **[ ] Chunk 2.2: Line Parser**
+* **[x] Chunk 2.2: Line Parser**
     * **Task:** Create a new `src/parser.rs` module and declare it in `src/lib.rs`.
     * **Task:** Create a new test file `tests/parser.rs`.
     * **TDD: Write a failing test** in `tests/parser.rs` that passes a single, valid line of TSV data to a new `parser::parse_line` function and asserts a correctly parsed `AsnRecord`.

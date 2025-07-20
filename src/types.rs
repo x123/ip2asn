@@ -11,8 +11,8 @@
 /// - `organization_idx`: An index into a string interning table, pointing to the
 ///   full organization name. This avoids storing duplicate strings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct AsnRecord {
-    pub(crate) asn: u32,
-    pub(crate) country_code: [u8; 2],
-    pub(crate) organization_idx: u32,
+pub struct AsnRecord {
+    pub asn: u32,
+    pub country_code: [u8; 2],
+    pub organization_idx: u32,
 }
