@@ -1,0 +1,20 @@
+38.103.144.0    38.103.149.255  174     US      COGENT-174
+185.71.20.0     185.71.23.255   203707  PL      ASDU
+2a02:fe80:22::  2a02:fe80:100f:ffff:ffff:ffff:ffff:ffff 0       None    Not routed
+192.196.160.0   192.196.160.255 0       None    Not routed
+210.51.35.0     210.51.35.255   17621   CN      CNCGROUP-SH China Unicom Shanghai network
+213.230.0.0     213.230.0.255   28938   SA      MEDUNET-AS Program for Medical and Educational Telecommunications Riyadh, Saudi Arabia
+2408:8456:d040::        2408:8456:dc0f:ffff:ffff:ffff:ffff:ffff 17816   CN      CHINA169-GZ China Unicom IP network China169 Guangdong province
+66.213.139.0    66.213.143.255  22969   US      AFS-ATL
+63.26.3.0       63.26.15.255    6984    US      NYNEX-AS
+91.206.181.0    91.206.181.255  60809   PL      ASN-SMPRASZKA
+2804:2f8c::     2804:2f8c:ffff:ffff:ffff:ffff:ffff:ffff 264898  BR      Intesys Informatica LTDA
+2804:1101::     2804:1103:ffff:ffff:ffff:ffff:ffff:ffff 0       None    Not routed
+2803:c280::     2803:c280:2:ffff:ffff:ffff:ffff:ffff    265775  EC      AUSTRONET
+206.78.114.0    206.78.127.255  26403   US      MADERACOE
+2804:4ed5::     2804:4ed7:ffff:ffff:ffff:ffff:ffff:ffff 0       None    Not routed
+186.26.112.0    186.26.116.255  14754   GT      TELECOMUNICACIONES DE GUATEMALA, SOCIEDAD ANONIMA
+185.85.76.0     185.85.77.255   0       None    Not routed
+2620:b7:6000::  2620:b7:6000:ffff:ffff:ffff:ffff:ffff   20055   US      AS-WHOLESAIL
+70.159.5.0      70.159.8.255    6389    US      BELLSOUTH-NET-BLK
+185.237.4.0     185.237.4.255   14618   US      AMAZON-AES

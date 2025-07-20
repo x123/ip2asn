@@ -15,7 +15,7 @@ chunk within a phase represents a small, testable unit of work.
     * **Task:** Add initial dependencies to `Cargo.toml`: `ip_network` for IP address manipulation.
     * **Task:** Set up the basic module structure in `src/lib.rs` and create a private `range.rs` module for the new logic.
 
-* **[ ] Chunk 1.2: Foundational Cases (IPv4)**
+* **[x] Chunk 1.2: Foundational Cases (IPv4)**
     * **TDD: Write a failing test** for the simplest case: a single IP address range (e.g., `10.0.0.5` to `10.0.0.5`), asserting it returns a single `/32` CIDR.
     * **Task:** Write the minimal code in `src/range.rs` to make the single-address test pass.
     * **Task:** Add a failing test for a perfectly aligned CIDR block (e.g., `192.168.0.0` to `192.168.0.255`), asserting it returns a single `/24`.
