@@ -42,6 +42,7 @@ use crate::parser::{ParsedLine, parse_line};
 use crate::range::range_to_cidrs;
 use crate::types::AsnRecord;
 use flate2::read::GzDecoder;
+use ip_network::IpNetwork;
 use ip_network_table::IpNetworkTable;
 use std::fmt;
 use std::fs::File;
@@ -157,9 +158,10 @@ impl IpAsnMap {
     /// The lookup is a longest-prefix match, ensuring the most specific
     /// network range is returned.
     pub fn lookup(&self, ip: IpAddr) -> Option<AsnInfoView> {
-        self.table.longest_match(ip).map(|(_, record)| {
+        self.table.longest_match(ip).map(|(network, record)| {
             let organization = &self.organizations[record.organization_idx as usize];
             AsnInfoView {
+                network,
                 asn: record.asn,
                 country_code: std::str::from_utf8(&record.country_code).unwrap_or_default(),
                 organization,
@@ -323,6 +325,8 @@ impl<'a> Builder<'a> {
 /// This struct is returned by the `lookup` method.
 #[derive(Debug, PartialEq, Eq)]
 pub struct AsnInfoView<'a> {
+    /// The matching IP network block for the looked-up address.
+    pub network: IpNetwork,
     /// The Autonomous System Number (ASN).
     pub asn: u32,
     /// The two-letter ISO 3166-1 alpha-2 country code.

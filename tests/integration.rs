@@ -1,3 +1,4 @@
+use ip_network::IpNetwork;
 use ip2asn::{AsnInfoView, Builder, Error, IpAsnMap, ParseErrorKind, Warning};
 use std::net::Ipv4Addr;
 use std::sync::Arc;
@@ -15,6 +16,7 @@ const TEST_DATA: &str = r#"
 fn test_builder_and_lookup() {
     let map: IpAsnMap = Builder::new()
         .with_source(TEST_DATA.as_bytes())
+        .unwrap()
         .build()
         .unwrap();
 
@@ -23,6 +25,7 @@ fn test_builder_and_lookup() {
     assert_eq!(
         result1,
         AsnInfoView {
+            network: "1.0.0.0/24".parse::<IpNetwork>().unwrap(),
             asn: 13335,
             country_code: "US",
             organization: "CLOUDFLARENET",
@@ -34,6 +37,7 @@ fn test_builder_and_lookup() {
     assert_eq!(
         result2,
         AsnInfoView {
+            network: "1.0.1.0/24".parse::<IpNetwork>().unwrap(),
             asn: 38040,
             country_code: "AU",
             organization: "GTELECOM",
@@ -42,7 +46,15 @@ fn test_builder_and_lookup() {
 
     // Case 3: IP at the end of a range
     let result3 = map.lookup(Ipv4Addr::new(1, 0, 3, 255).into()).unwrap();
-    assert_eq!(result3, result2); // Should be the same record
+    assert_eq!(
+        result3,
+        AsnInfoView {
+            network: "1.0.2.0/23".parse::<IpNetwork>().unwrap(),
+            asn: 38040,
+            country_code: "AU",
+            organization: "GTELECOM",
+        }
+    );
 
     // Case 4: IP not in any range
     let result4 = map.lookup(Ipv4Addr::new(127, 0, 0, 1).into());
@@ -53,6 +65,7 @@ fn test_builder_and_lookup() {
     assert_eq!(
         result5,
         AsnInfoView {
+            network: "8.8.8.0/24".parse::<IpNetwork>().unwrap(),
             asn: 15169,
             country_code: "US",
             organization: "GTELECOM",
@@ -74,6 +87,7 @@ fn test_builder_from_path() {
     assert_eq!(
         result_plain,
         AsnInfoView {
+            network: "154.16.226.0/24".parse().unwrap(),
             asn: 61317,
             country_code: "US",
             organization: "ASDETUK www.heficed.com",
@@ -94,6 +108,7 @@ fn test_builder_from_path() {
     assert_eq!(
         result_ipv6,
         AsnInfoView {
+            network: "2001:67c:2309::/48".parse().unwrap(),
             asn: 0,
             country_code: "ZZ", // "None" is normalized to "ZZ"
             organization: "Not routed",
@@ -105,6 +120,7 @@ fn test_builder_from_path() {
     assert_eq!(
         result_multi_word,
         AsnInfoView {
+            network: "45.234.212.0/22".parse().unwrap(),
             asn: 267373,
             country_code: "BR",
             organization: "AGIL TECOMUNICACOES LTDA",
@@ -138,6 +154,7 @@ invalid line format
 fn test_builder_strict_mode() {
     let result = Builder::new()
         .with_source(MALFORMED_DATA.as_bytes())
+        .unwrap()
         .strict()
         .build();
 
@@ -174,6 +191,7 @@ fn test_builder_warning_callback() {
 
     let map = Builder::new()
         .with_source(MALFORMED_DATA.as_bytes())
+        .unwrap()
         .on_warning(callback)
         .build()
         .unwrap();

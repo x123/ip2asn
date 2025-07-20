@@ -170,14 +170,14 @@ documentation, and prepare the crate for its `v0.1.0` release on `crates.io`.
         4.  **`lookup_miss_benchmark`**: Measures lookup speed for addresses known *not* to be in the dataset (e.g., private ranges, reserved addresses).
     *   **Task:** Run `cargo bench` and analyze the results. Ensure the lookup performance meets the `< 500ns` goal specified in `spec.md`.
 
-* **[ ] Chunk 5.3: Document the Final Product**
+* **[x] Chunk 5.3: Document the Final Product**
     *   **Task:** Write comprehensive crate-level documentation (`//!`) in `src/lib.rs`. This should cover the crate's purpose, core concepts, features (`fetch`), and a basic usage example.
     *   **Task:** Write detailed documentation for every public item (`IpAsnMap`, `Builder`, `AsnInfoView`, `Error`, and all their public methods), including examples where appropriate.
     *   **Task:** Add the full, runnable async usage examples for both `tokio` and `smol` to the crate-level documentation, as specified in `spec.md`.
     *   **Task:** Create a high-quality `README.md` file for the GitHub repository, including badges (`crates.io`, `docs.rs`), a summary, usage examples, and a note on performance.
     *   **Task:** Run `cargo doc --open` to preview the generated documentation and fix any rendering issues or missing items.
 
-* **[ ] Chunk 5.4: Final Review & Publish**
+* **[x] Chunk 5.4: Final Review & Publish**
     *   **Task:** Perform a final review of the entire API against the [Rust API Guidelines checklist](https://rust-lang.github.io/api-guidelines/checklist.html).
     *   **Task:** Run `cargo clippy -- -D warnings` and fix all lints.
     *   **Task:** Run `cargo test --all-features` one last time to ensure all tests pass.
@@ -185,3 +185,23 @@ documentation, and prepare the crate for its `v0.1.0` release on `crates.io`.
     *   **Task:** Perform a dry run of publishing with `cargo publish --dry-run`.
     *   **Task:** (User action) Log in to `crates.io` with `cargo login`.
     *   **Task:** (User action) Publish the crate with `cargo publish`.
+
+---
+
+### Phase 6: Expose Network in Lookup
+
+*   **Objective:** Enhance the public API to include the matching network CIDR in lookup results, providing more complete information to the user. This will be a breaking change, which is acceptable for a pre-1.0 release.
+
+*   **[x] Chunk 6.1: Enhance `AsnInfoView` and `lookup`**
+    *   **TDD: Write a failing test** in `tests/integration.rs` that asserts the new `network` field in `AsnInfoView` contains the correct CIDR after a lookup.
+    *   **Task:** Add the `ip_network` crate as a public dependency in `Cargo.toml` so it can be used in the public `AsnInfoView` struct.
+    *   **Task:** Modify the `AsnInfoView` struct in `src/lib.rs` to include a new public field: `pub network: IpNetwork`.
+    *   **Task:** Update the `lookup` method in `src/lib.rs` to populate the new `network` field from the `longest_match` result.
+    *   **Task:** Update the `Debug` and `PartialEq` derives on `AsnInfoView` to account for the new field.
+    *   **Task:** Ensure all tests pass.
+
+*   **[ ] Chunk 6.2: Update Documentation**
+    *   **Task:** Update the `README.md` file to reflect the new `network` field in the `AsnInfoView` struct and adjust the usage examples accordingly.
+    *   **Task:** Update the crate-level documentation and the `lookup` method's doc comments in `src/lib.rs` to describe the new `network` field.
+    *   **Task:** Run `just bench` to ensure the benchmarks are still good.
+    *   **Task:** Run `cargo doc --all-features --open` to verify that all documentation is correct and renders properly.
