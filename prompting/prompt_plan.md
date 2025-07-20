@@ -197,6 +197,37 @@ documentation, and prepare the crate for its `v0.1.0` release on `crates.io`.
     *   **Task:** Run `just bench` to ensure the benchmarks are still good.
     *   **Task:** Run `cargo doc --all-features --open` to verify that all documentation is correct and renders properly.
 
+---
+
+### Phase 6A: API Guideline Audit & Polish
+
+*   **Objective:** Perform a rigorous, systematic audit of the entire public API against the official Rust API Guidelines checklist. This ensures the crate is idiomatic, robust, and ready for a high-quality `v0.1.0` release.
+
+*   **[x] Chunk 6A.1: Audit Setup & Naming Conventions**
+    *   **Task:** Create a new audit file at `prompting/api_review.md`.
+    *   **Task:** Populate `prompting/api_review.md` with the full checklist from the [Rust API Guidelines website](https://rust-lang.github.io/api-guidelines/checklist.html).
+    *   **Task:** Systematically audit the codebase against the "Naming" section of the checklist (`C-CASE`, `C-CONV`, `C-GETTER`, `C-ITER`, `C-ITER-TY`, `C-FEATURE`, `C-WORD-ORDER`), marking each item as complete in the audit file and fixing any deviations.
+
+*   **[ ] Chunk 6A.2: Interoperability & Documentation Audit**
+    *   **Task:** Audit the codebase against the "Interoperability" section (`C-COMMON-TRAITS`, `C-CONV-TRAITS`, `C-SEND-SYNC`, `C-GOOD-ERR`). Ensure the `Error` enum implements `std::error::Error`.
+    *   **Task:** Perform a final review of the "Documentation" section (`C-CRATE-DOC`, `C-EXAMPLE`, `C-QUESTION-MARK`, `C-FAILURE`). Verify all public items are documented and examples are robust.
+
+*   **[ ] Chunk 6A.3: Predictability, Flexibility & Type Safety Audit**
+    *   **Task:** Audit the codebase against the "Predictability" section (`C-METHOD`, `C-CTOR`, `C-DEREF`).
+    *   **Task:** Audit the codebase against the "Flexibility" section (`C-CALLER-CONTROL`, `C-GENERIC`).
+    *   **Task:** Audit the codebase against the "Type Safety" section (`C-BUILDER`, `C-CUSTOM-TYPE`).
+
+*   **[ ] Chunk 6A.4: Dependability, Debuggability & Future-Proofing Audit**
+    *   **Task:** Audit the codebase against the "Dependability" section (`C-VALIDATE`).
+    *   **Task:** Audit the codebase against the "Debuggability" section (`C-DEBUG`).
+    *   **Task:** Audit the codebase against the "Future-Proofing" section (`C-STRUCT-PRIVATE`).
+    *   **Task:** Audit the codebase against the "Necessities" section (`C-PERMISSIVE`) by running `cargo deny check`.
+
+*   **[ ] Chunk 6A.5: Final Linting & Cleanup**
+    *   **Task:** Run `cargo clippy --all-targets --all-features -- -D warnings` and fix all reported lints.
+    *   **Task:** Run `cargo test --all-features` one last time to ensure the audit and fixes have not introduced any regressions.
+    *   **Task:** Delete the `prompting/api_review.md` audit file.
+
 --- 
 
 ### Phase 7: Publish
