@@ -1,11 +1,20 @@
 //! Contains the logic for parsing a single line of the `iptoasn.com` TSV data.
 
-use crate::{ParseErrorKind, types::AsnRecord};
+use crate::ParseErrorKind;
 use std::net::IpAddr;
-
 use std::str::FromStr;
 
-pub fn parse_line(line: &str) -> Result<(IpAddr, IpAddr, AsnRecord), ParseErrorKind> {
+/// A temporary struct holding the successfully parsed fields from a data line.
+#[derive(Debug, PartialEq, Eq)]
+pub struct ParsedLine<'a> {
+    pub start_ip: IpAddr,
+    pub end_ip: IpAddr,
+    pub asn: u32,
+    pub country_code: [u8; 2],
+    pub organization: &'a str,
+}
+
+pub fn parse_line(line: &str) -> Result<ParsedLine, ParseErrorKind> {
     const EXPECTED_COLUMNS: usize = 5;
     let parts: Vec<&str> = line.split('\t').collect();
     if parts.len() != EXPECTED_COLUMNS {
@@ -19,7 +28,7 @@ pub fn parse_line(line: &str) -> Result<(IpAddr, IpAddr, AsnRecord), ParseErrorK
     let end_ip_str = parts[1];
     let asn_str = parts[2];
     let country_code_str = parts[3];
-    // parts[4] is the organization name, which we will handle later with the interner.
+    let organization = parts[4];
 
     let start_ip =
         IpAddr::from_str(start_ip_str).map_err(|_| ParseErrorKind::InvalidIpAddress {
@@ -58,11 +67,11 @@ pub fn parse_line(line: &str) -> Result<(IpAddr, IpAddr, AsnRecord), ParseErrorK
         }
     };
 
-    let record = AsnRecord {
+    Ok(ParsedLine {
+        start_ip,
+        end_ip,
         asn,
         country_code,
-        organization_idx: 0, // Placeholder for now
-    };
-
-    Ok((start_ip, end_ip, record))
+        organization,
+    })
 }

@@ -21,8 +21,8 @@ impl StringInterner {
         id
     }
 
-    pub(crate) fn get(&self, id: u32) -> &str {
-        &self.vec[id as usize]
+    pub(crate) fn into_vec(self) -> Vec<String> {
+        self.vec
     }
 }
 
@@ -46,8 +46,10 @@ mod tests {
         let id3 = interner.get_or_intern("Apple Inc.");
         assert_eq!(id3, 0);
 
-        // Retrieve the strings by ID
-        assert_eq!(interner.get(id1), "Apple Inc.");
-        assert_eq!(interner.get(id2), "Google LLC");
+        // Consume the interner and check the resulting vector
+        let strings = interner.into_vec();
+        assert_eq!(strings.len(), 2);
+        assert_eq!(strings[id1 as usize], "Apple Inc.");
+        assert_eq!(strings[id2 as usize], "Google LLC");
     }
 }

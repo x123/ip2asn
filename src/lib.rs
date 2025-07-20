@@ -3,14 +3,93 @@ pub mod parser;
 pub mod range;
 pub mod types;
 
+use crate::interner::StringInterner;
+use crate::parser::{ParsedLine, parse_line};
+use crate::range::range_to_cidrs;
+use crate::types::AsnRecord;
+use ip_network_table::IpNetworkTable;
+use std::io::BufRead;
 use std::net::IpAddr;
 
 /// A read-optimized, in-memory map for IP address to ASN lookups.
 /// Construction is handled by the `Builder`.
-pub struct IpAsnMap {/* private fields */}
+use std::fmt;
+
+pub struct IpAsnMap {
+    table: IpNetworkTable<AsnRecord>,
+    organizations: Vec<String>,
+}
+
+impl fmt::Debug for IpAsnMap {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("IpAsnMap")
+            .field("organizations", &self.organizations.len())
+            .finish_non_exhaustive()
+    }
+}
+
+impl IpAsnMap {
+    /// Looks up an IP address, returning a view into its ASN information if found.
+    pub fn lookup(&self, ip: IpAddr) -> Option<AsnInfoView> {
+        self.table.longest_match(ip).map(|(_, record)| {
+            let organization = &self.organizations[record.organization_idx as usize];
+            AsnInfoView {
+                asn: record.asn,
+                country_code: std::str::from_utf8(&record.country_code).unwrap_or_default(),
+                organization,
+            }
+        })
+    }
+}
 
 /// A builder for configuring and loading an `IpAsnMap`.
-pub struct Builder {/* private fields */}
+pub struct Builder<'a> {
+    source: Box<dyn BufRead + 'a>,
+}
+
+impl<'a> Builder<'a> {
+    /// Creates a new builder that will read data from the given source.
+    pub fn with_source(source: impl BufRead + 'a) -> Self {
+        Self {
+            source: Box::new(source),
+        }
+    }
+
+    /// Builds the `IpAsnMap`, consuming the builder.
+    ///
+    /// This method reads from the source, parses each line, interns strings,
+    /// converts IP ranges to CIDRs, and inserts them into the final lookup table.
+    pub fn build(self) -> Result<IpAsnMap, Error> {
+        let mut interner = StringInterner::new();
+        let mut table = IpNetworkTable::new();
+
+        for line_result in self.source.lines() {
+            let line = line_result.map_err(Error::Io)?;
+            let parsed: ParsedLine = match parse_line(&line) {
+                Ok(p) => p,
+                Err(_) => continue, // For now, skip errors.
+            };
+
+            let org_idx = interner.get_or_intern(parsed.organization);
+
+            let record = AsnRecord {
+                asn: parsed.asn,
+                country_code: parsed.country_code,
+                organization_idx: org_idx,
+            };
+
+            for cidr in range_to_cidrs(parsed.start_ip, parsed.end_ip) {
+                table.insert(cidr, record);
+            }
+        }
+
+        let organizations = interner.into_vec();
+        Ok(IpAsnMap {
+            table,
+            organizations,
+        })
+    }
+}
 
 /// A lightweight, read-only view into the ASN information for an IP address.
 /// This struct is returned by the `lookup` method.

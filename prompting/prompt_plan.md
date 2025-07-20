@@ -71,7 +71,7 @@ source.
         *   Assert that retrieving ID 1 returns `"Google LLC"`.
     *   **Task:** Implement the `get_or_intern(&mut self, s: &str) -> u32` and `get(&self, id: u32) -> &str` methods on `StringInterner` to make the tests pass.
 
-*   **[ ] Chunk 3.2: Builder & Lookup Integration**
+*   **[x] Chunk 3.2: Builder & Lookup Integration**
     *   **Task:** Add the `ip_network_table` crate as a dependency in `Cargo.toml`.
     *   **Task:** Create a new `tests/integration.rs` file.
     *   **TDD: Write a failing integration test** in `tests/integration.rs`. This test will be the primary driver for the integration work. It should:
