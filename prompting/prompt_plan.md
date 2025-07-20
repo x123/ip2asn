@@ -98,22 +98,52 @@ source.
     *   **Task:** Ensure all tests pass.
 
 ---
+Excellent. Here is the detailed plan for Phase 4, formatted for `prompt_plan.md`, based on our discussion of Approach 1.
+
+---
 
 ### **Phase 4: I/O, Features, and Ergonomics** 🔌
 
-**Goal:** Add support for file/network I/O and the optional `serde` and `fetch` features.
+**Goal:** Add support for file/network I/O and the optional `serde` and `fetch`
+features, making the library robust and easy to use in production environments.
+This phase implements the I/O methods on the `Builder` and serialization
+methods on the `IpAsnMap` as defined in the specification.
 
-* **[ ] Chunk 4.1: Gzip Decompression**
-    * **TDD: Write a failing test** using two files (one plain, one gzipped). Assert that building from plain text works but building from the gzipped file fails.
-    * **Task:** Implement `Builder::with_file`, adding magic byte detection and the `flate2` dependency to handle decompression transparently. Ensure both tests pass.
+*   **[x] Chunk 4.1: File I/O & Gzip Decompression**
+    *   **Task:** Add `flate2` as a dependency.
+    *   **Task:** Create two test data files in `testdata/`: one plain text (`small.tsv`) and an identical one that is gzipped (`small.tsv.gz`).
+    *   **TDD: Write a failing integration test.** The test should first build a map from the plain text file using a new `Builder::from_path()` method and assert it succeeds. Then, add a second assertion that building from the gzipped file fails.
+    *   **Task:** Implement `Builder::from_path(path: P) where P: AsRef<Path>`. This method will:
+        1.  Open the file.
+        2.  Read the first two bytes to check for the gzip magic number (`[0x1f, 0x8b]`).
+        3.  If the magic number is present, wrap the file reader in a `flate2::read::GzDecoder`.
+        4.  Wrap the resulting reader in a `BufReader` and store it in the builder's `source` field.
+    *   **Task:** Update the `Error` enum with an `Io(std::io::Error)` variant and propagate any file-related errors.
+    *   **Task:** Ensure both tests (plain and gzipped) pass, demonstrating transparent decompression.
 
-* **[ ] Chunk 4.2: `fetch` Feature**
-    * **TDD: Write a failing test** (gated by `#[cfg(feature = "fetch")]`) that uses a mock HTTP server (`wiremock`) to serve test data and asserts that `Builder::with_url` fails.
-    * **Task:** Add the `reqwest` dependency (with `blocking` feature) and implement `with_url`. Ensure the test passes.
+*   **[ ] Chunk 4.2: `fetch` Feature & Network I/O**
+    *   **Task:** Add `reqwest` (with `blocking` feature) and `wiremock` (as a `dev-dependency`) to `Cargo.toml`.
+    *   **TDD: Write a failing integration test, gated by `#[cfg(feature = "fetch")]`.** The test should:
+        1.  Start a `wiremock::MockServer`.
+        2.  Set up a mock to respond to a GET request with the contents of the gzipped test data file (`small.tsv.gz`) and a `Content-Type: application/gzip` header.
+        3.  Call a new `Builder::from_url(mock_server.uri())` method and assert that the build fails.
+    *   **Task:** Implement `Builder::from_url(url: &str)`, gated by the `fetch` feature. This method will:
+        1.  Use `reqwest::blocking::get()` to fetch the URL.
+        2.  Handle potential HTTP errors, wrapping them in a new `Error::Http` variant.
+        3.  The response body from `reqwest` is a reader. Buffer it, then apply the same gzip magic-byte detection logic from Chunk 4.1 to transparently decompress the stream.
+    *   **Task:** Ensure the `wiremock` test passes.
 
-* **[ ] Chunk 4.3: `serde` Feature**
-    * **TDD: Write a failing test** (gated by `#[cfg(feature = "serde")]`) that builds a map, serializes it, deserializes it, and asserts that a lookup on the new map returns the correct data.
-    * **Task:** Add `serde` and `postcard` dependencies, derive traits, and implement the public `serialize` and `deserialize` methods. Ensure the test passes.
+*   **[ ] Chunk 4.3: `serde` Feature & Serialization**
+    *   **Task:** Add `postcard` and `serde` (with the `derive` feature) to `Cargo.toml`.
+    *   **Task:** Add `#[derive(Serialize, Deserialize)]` to `IpAsnMap` and its internal components (`AsnRecord`, etc.). Note that `IpNetworkTable` already supports `serde`.
+    *   **TDD: Write a failing integration test, gated by `#[cfg(feature = "serde")]`.** The test should:
+        1.  Build an `IpAsnMap` from a test file.
+        2.  Call a new `map.to_bytes()` method and assert it succeeds.
+        3.  Call a new `IpAsnMap::from_bytes()` with the resulting byte slice and assert it fails.
+    *   **Task:** Implement `IpAsnMap::to_bytes(&self) -> Result<Vec<u8>, Error>` using `postcard::to_allocvec`.
+    *   **Task:** Implement `IpAsnMap::from_bytes(bytes: &[u8]) -> Result<Self, Error>` using `postcard::from_bytes`.
+    *   **Task:** Update the `Error` enum with a `Serialization(String)` variant to wrap errors from `postcard`.
+    *   **Task:** Refine the test to assert that a lookup on the deserialized map returns the exact same `AsnInfoView` as a lookup on the original map.
 
 ---
 

@@ -1,4 +1,4 @@
-use ip2asn::{AsnInfoView, Builder, IpAsnMap};
+use ip2asn::{AsnInfoView, Builder, Error, IpAsnMap};
 use std::net::Ipv4Addr;
 
 const TEST_DATA: &str = r#"
@@ -55,4 +55,64 @@ fn test_builder_and_lookup() {
     );
     // Check that the organization string is the same instance as result2
     assert_eq!(result2.organization, result5.organization);
+}
+
+#[test]
+fn test_builder_from_path() {
+    // Test with plain text file
+    let map_plain = Builder::from_path("testdata/testdata-small-ip2asn.tsv")
+        .unwrap()
+        .build()
+        .unwrap();
+    let result_plain = map_plain.lookup("154.16.226.100".parse().unwrap()).unwrap();
+    assert_eq!(
+        result_plain,
+        AsnInfoView {
+            asn: 61317,
+            country_code: "US",
+            organization: "ASDETUK www.heficed.com",
+        }
+    );
+
+    // Test with gzipped file
+    let map_gz = Builder::from_path("testdata/testdata-small-ip2asn.tsv.gz")
+        .unwrap()
+        .build()
+        .unwrap();
+    let result_gz = map_gz.lookup("154.16.226.100".parse().unwrap()).unwrap();
+    assert_eq!(result_plain, result_gz);
+
+    // Check an IPv6 address from the file
+    let result_ipv6 = map_gz.lookup("2001:67c:2309::1".parse().unwrap()).unwrap();
+    assert_eq!(
+        result_ipv6,
+        AsnInfoView {
+            asn: 0,
+            country_code: "ZZ", // "None" is normalized to "ZZ"
+            organization: "Not routed",
+        }
+    );
+
+    // Check a multi-word organization name
+    let result_multi_word = map_plain.lookup("45.234.212.10".parse().unwrap()).unwrap();
+    assert_eq!(
+        result_multi_word,
+        AsnInfoView {
+            asn: 267373,
+            country_code: "BR",
+            organization: "AGIL TECOMUNICACOES LTDA",
+        }
+    );
+}
+
+#[test]
+fn test_builder_from_path_not_found() {
+    let result = Builder::from_path("testdata/file-does-not-exist.tsv");
+    assert!(result.is_err());
+    match result {
+        Err(Error::Io(e)) => {
+            assert_eq!(e.kind(), std::io::ErrorKind::NotFound);
+        }
+        _ => panic!("Expected an I/O error"),
+    }
 }
