@@ -12,12 +12,12 @@
 
 ## Interoperability (crate interacts nicely with other library functionality)
 
-*   [ ] Types eagerly implement common traits ([C-COMMON-TRAITS](https://rust-lang.github.io/api-guidelines/interoperability.html#c-common-traits))
-*   [ ] Conversions use the standard traits `From`, `AsRef`, `AsMut` ([C-CONV-TRAITS](https://rust-lang.github.io/api-guidelines/interoperability.html#c-conv-traits))
+*   [x] Types eagerly implement common traits ([C-COMMON-TRAITS](https://rust-lang.github.io/api-guidelines/interoperability.html#c-common-traits))
+*   [x] Conversions use the standard traits `From`, `AsRef`, `AsMut` ([C-CONV-TRAITS](https://rust-lang.github.io/api-guidelines/interoperability.html#c-conv-traits))
 *   [ ] Collections implement `FromIterator` and `Extend` ([C-COLLECT](https://rust-lang.github.io/api-guidelines/interoperability.html#c-collect))
 *   [ ] Data structures implement Serde's `Serialize`, `Deserialize` ([C-SERDE](https://rust-lang.github.io/api-guidelines/interoperability.html#c-serde))
-*   [ ] Types are `Send` and `Sync` where possible ([C-SEND-SYNC](https://rust-lang.github.io/api-guidelines/interoperability.html#c-send-sync))
-*   [ ] Error types are meaningful and well-behaved ([C-GOOD-ERR](https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err))
+*   [x] Types are `Send` and `Sync` where possible ([C-SEND-SYNC](https://rust-lang.github.io/api-guidelines/interoperability.html#c-send-sync))
+*   [x] Error types are meaningful and well-behaved ([C-GOOD-ERR](https://rust-lang.github.io/api-guidelines/interoperability.html#c-good-err))
 *   [ ] Binary number types provide `Hex`, `Octal`, `Binary` formatting ([C-NUM-FMT](https://rust-lang.github.io/api-guidelines/interoperability.html#c-num-fmt))
 *   [ ] Generic reader/writer functions take `"R: Read"` and `"W: Write"` by value ([C-RW-VALUE](https://rust-lang.github.io/api-guidelines/interoperability.html#c-rw-value))
 
@@ -31,10 +31,10 @@
 
 ## Documentation (crate is abundantly documented)
 
-*   [ ] Crate level docs are thorough and include examples ([C-CRATE-DOC](https://rust-lang.github.io/api-guidelines/documentation.html#c-crate-doc))
-*   [ ] All items have a rustdoc example ([C-EXAMPLE](https://rust-lang.github.io/api-guidelines/documentation.html#c-example))
-*   [ ] Examples use `?`, not `try!`, not `unwrap` ([C-QUESTION-MARK](https://rust-lang.github.io/api-guidelines/documentation.html#c-question-mark))
-*   [ ] Function docs include error, panic, and safety considerations ([C-FAILURE](https://rust-lang.github.io/api-guidelines/documentation.html#c-failure))
+*   [x] Crate level docs are thorough and include examples ([C-CRATE-DOC](https://rust-lang.github.io/api-guidelines/documentation.html#c-crate-doc))
+*   [x] All items have a rustdoc example ([C-EXAMPLE](https://rust-lang.github.io/api-guidelines/documentation.html#c-example))
+*   [x] Examples use `?`, not `try!`, not `unwrap` ([C-QUESTION-MARK](https://rust-lang.github.io/api-guidelines/documentation.html#c-question-mark))
+*   [x] Function docs include error, panic, and safety considerations ([C-FAILURE](https://rust-lang.github.io/api-guidelines/documentation.html#c-failure))
 *   [ ] Prose contains hyperlinks to relevant things ([C-LINK](https://rust-lang.github.io/api-guidelines/documentation.html#c-link))
 *   [ ] Cargo.toml includes all common metadata ([C-METADATA](https://rust-lang.github.io/api-guidelines/documentation.html#c-metadata))
 *   [ ] Release notes document all significant changes ([C-RELNOTES](https://rust-lang.github.io/api-guidelines/documentation.html#c-relnotes))

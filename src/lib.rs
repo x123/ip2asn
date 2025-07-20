@@ -48,6 +48,7 @@ use crate::types::AsnRecord;
 use flate2::read::GzDecoder;
 use ip_network::IpNetwork;
 use ip_network_table::IpNetworkTable;
+use std::error::Error as StdError;
 use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -75,6 +76,48 @@ pub enum Error {
     },
 }
 
+impl StdError for Error {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        match self {
+            Error::Io(e) => Some(e),
+            #[cfg(feature = "fetch")]
+            Error::Http(e) => Some(e),
+            Error::Parse { .. } => None,
+        }
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::Io(e) => write!(f, "I/O error: {e}"),
+            #[cfg(feature = "fetch")]
+            Error::Http(e) => write!(f, "HTTP error: {e}"),
+            Error::Parse {
+                line_number,
+                line_content,
+                kind,
+            } => write!(
+                f,
+                "Parse error on line {line_number}: {kind} in line: \"{line_content}\""
+            ),
+        }
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Self {
+        Error::Io(err)
+    }
+}
+
+#[cfg(feature = "fetch")]
+impl From<reqwest::Error> for Error {
+    fn from(err: reqwest::Error) -> Self {
+        Error::Http(err)
+    }
+}
+
 /// A non-fatal warning for a skipped line during parsing.
 #[derive(Debug)]
 pub enum Warning {
@@ -94,6 +137,28 @@ pub enum Warning {
         /// The content of the line that was skipped.
         line_content: String,
     },
+}
+
+impl fmt::Display for Warning {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Warning::Parse {
+                line_number,
+                line_content,
+                message,
+            } => write!(
+                f,
+                "Parse warning on line {line_number}: {message} in line: \"{line_content}\""
+            ),
+            Warning::IpFamilyMismatch {
+                line_number,
+                line_content,
+            } => write!(
+                f,
+                "IP family mismatch on line {line_number}: \"{line_content}\""
+            ),
+        }
+    }
 }
 
 /// The specific kind of error that occurred during line parsing.
@@ -132,6 +197,31 @@ pub enum ParseErrorKind {
         /// The value that could not be parsed as a country code.
         value: String,
     },
+}
+
+impl fmt::Display for ParseErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ParseErrorKind::IncorrectColumnCount { expected, found } => {
+                write!(f, "expected {expected} columns, but found {found}")
+            }
+            ParseErrorKind::InvalidIpAddress { field, value } => {
+                write!(f, "invalid IP address for field `{field}`: {value}")
+            }
+            ParseErrorKind::InvalidAsnNumber { value } => {
+                write!(f, "invalid ASN: {value}")
+            }
+            ParseErrorKind::InvalidRange { start_ip, end_ip } => {
+                write!(f, "start IP {start_ip} is greater than end IP {end_ip}")
+            }
+            ParseErrorKind::IpFamilyMismatch => {
+                write!(f, "start and end IPs are of different families")
+            }
+            ParseErrorKind::InvalidCountryCode { value } => {
+                write!(f, "invalid country code: {value}")
+            }
+        }
+    }
 }
 
 /// A read-optimized, in-memory map for IP address to ASN lookups.
@@ -193,7 +283,7 @@ impl<'a> Builder<'a> {
     ///
     /// Gzip decompression is handled automatically by inspecting the file's magic bytes.
     pub fn from_path<P: AsRef<Path>>(mut self, path: P) -> Result<Self, Error> {
-        let file = File::open(path.as_ref()).map_err(Error::Io)?;
+        let file = File::open(path.as_ref())?;
         let reader = BufReader::new(file);
         self.source = Some(self.create_source_from_reader(reader)?);
         Ok(self)
@@ -216,8 +306,8 @@ impl<'a> Builder<'a> {
     /// Gzip decompression is handled automatically by inspecting the stream's magic bytes.
     #[cfg(feature = "fetch")]
     pub fn from_url(mut self, url: &str) -> Result<Self, Error> {
-        let response = reqwest::blocking::get(url).map_err(Error::Http)?;
-        let response = response.error_for_status().map_err(Error::Http)?;
+        let response = reqwest::blocking::get(url)?;
+        let response = response.error_for_status()?;
         let reader = BufReader::new(response);
         self.source = Some(self.create_source_from_reader(reader)?);
         Ok(self)
@@ -245,7 +335,7 @@ impl<'a> Builder<'a> {
         mut reader: impl BufRead + Send + 'a,
     ) -> Result<Box<dyn BufRead + Send + 'a>, Error> {
         let is_gzipped = {
-            let header = reader.fill_buf().map_err(Error::Io)?;
+            let header = reader.fill_buf()?;
             header.starts_with(&[0x1f, 0x8b])
         };
 
@@ -263,16 +353,19 @@ impl<'a> Builder<'a> {
     /// This method reads from the source, parses each line, interns strings,
     /// converts IP ranges to CIDRs, and inserts them into the final lookup table.
     pub fn build(self) -> Result<IpAsnMap, Error> {
-        let source = self
-            .source
-            .ok_or_else(|| Error::Io(std::io::Error::other("No data source provided")))?;
+        let source = self.source.ok_or_else(|| {
+            Error::Io(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "No data source provided",
+            ))
+        })?;
 
         let mut interner = StringInterner::new();
         let mut table = IpNetworkTable::new();
 
         for (i, line_result) in source.lines().enumerate() {
             let line_number = i + 1;
-            let line = line_result.map_err(Error::Io)?;
+            let line = line_result?;
             if line.is_empty() || line.starts_with('#') {
                 continue;
             }

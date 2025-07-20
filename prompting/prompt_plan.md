@@ -208,7 +208,7 @@ documentation, and prepare the crate for its `v0.1.0` release on `crates.io`.
     *   **Task:** Populate `prompting/api_review.md` with the full checklist from the [Rust API Guidelines website](https://rust-lang.github.io/api-guidelines/checklist.html).
     *   **Task:** Systematically audit the codebase against the "Naming" section of the checklist (`C-CASE`, `C-CONV`, `C-GETTER`, `C-ITER`, `C-ITER-TY`, `C-FEATURE`, `C-WORD-ORDER`), marking each item as complete in the audit file and fixing any deviations.
 
-*   **[ ] Chunk 6A.2: Interoperability & Documentation Audit**
+*   **[x] Chunk 6A.2: Interoperability & Documentation Audit**
     *   **Task:** Audit the codebase against the "Interoperability" section (`C-COMMON-TRAITS`, `C-CONV-TRAITS`, `C-SEND-SYNC`, `C-GOOD-ERR`). Ensure the `Error` enum implements `std::error::Error`.
     *   **Task:** Perform a final review of the "Documentation" section (`C-CRATE-DOC`, `C-EXAMPLE`, `C-QUESTION-MARK`, `C-FAILURE`). Verify all public items are documented and examples are robust.
 
