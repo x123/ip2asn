@@ -35,17 +35,20 @@ chunk within a phase represents a small, testable unit of work.
 
 **Goal:** Define all data structures and create a parser that can transform a single line of text into a structured internal record.
 
-* **[ ] Chunk 2.1: Define All Data Types**
-    * **Task:** In `src/lib.rs` and a new `src/types.rs` module, define the skeletons for all public-facing types: `IpAsnMap`, `Builder`, `AsnInfoView`, `Error`, and `Warning` (with its `ParseErrorKind`).
-    * **Task:** Define the *internal*, optimized `AsnRecord` struct that will be stored in the lookup table.
+* **[x] Chunk 2.1: Define All Data Types**
+    * **Task:** In `src/lib.rs`, define the public API skeletons for `IpAsnMap`, `Builder`, `AsnInfoView`, `Error`, and `Warning` (with its `ParseErrorKind`).
+    * **Task:** Create a new `src/types.rs` module and declare it in `src/lib.rs`.
+    * **Task:** In `src/types.rs`, define the *internal*, optimized `AsnRecord` struct that will be stored in the lookup table. This struct will hold the ASN, a `[u8; 2]` for the country code, and a `u32` for the interned organization string index.
 
 * **[ ] Chunk 2.2: Line Parser**
-    * **TDD: Write a failing test** in `tests/parser.rs` that passes a single, valid line of TSV data to a new private parsing function and asserts a correctly parsed `AsnRecord`.
-    * **Task:** Implement the happy-path logic for the parser.
-    * **Task:** Add failing tests for malformed lines (wrong column count, invalid IP/ASN, mismatched IP families), asserting the correct `ParseErrorKind`.
-    * **Task:** Add the error-checking and validation logic to the parser.
-    * **Task:** Add a failing test for country code normalization (e.g., `"None"` should become `['Z', 'Z']`).
-    * **Task:** Implement the country code normalization logic.
+    * **Task:** Create a new `src/parser.rs` module and declare it in `src/lib.rs`.
+    * **Task:** Create a new test file `tests/parser.rs`.
+    * **TDD: Write a failing test** in `tests/parser.rs` that passes a single, valid line of TSV data to a new `parser::parse_line` function and asserts a correctly parsed `AsnRecord`.
+    * **Task:** Implement the minimal happy-path logic in `parser::parse_line` to make the test pass.
+    * **TDD: Write failing tests** for malformed lines (wrong column count, invalid IP/ASN, mismatched IP families), asserting the correct `ParseErrorKind`.
+    * **Task:** Implement the error-checking and validation logic in the parser to make the error tests pass.
+    * **TDD: Write a failing test** for country code normalization (e.g., a line with `"None"` should result in an `AsnRecord` with `['Z', 'Z']`).
+    * **Task:** Implement the country code normalization logic to make the final test pass.
 
 ---
 
