@@ -48,10 +48,14 @@ fn main() -> Result<(), ip2asn::Error> {
     // Perform a lookup.
     let ip: IpAddr = "31.13.100.100".parse().unwrap();
     if let Some(info) = map.lookup(ip) {
+        assert_eq!(info.network, "31.13.64.0/18".parse().unwrap());
         assert_eq!(info.asn, 32934);
         assert_eq!(info.country_code, "US");
         assert_eq!(info.organization, "FACEBOOK-AS");
-        println!("{ip} -> AS{}: {} ({})", info.asn, info.organization, info.country_code);
+        println!(
+            "{} -> AS{} {} ({}) in {}",
+            ip, info.asn, info.organization, info.country_code, info.network
+        );
     }
 
     Ok(())

@@ -177,15 +177,6 @@ documentation, and prepare the crate for its `v0.1.0` release on `crates.io`.
     *   **Task:** Create a high-quality `README.md` file for the GitHub repository, including badges (`crates.io`, `docs.rs`), a summary, usage examples, and a note on performance.
     *   **Task:** Run `cargo doc --open` to preview the generated documentation and fix any rendering issues or missing items.
 
-* **[x] Chunk 5.4: Final Review & Publish**
-    *   **Task:** Perform a final review of the entire API against the [Rust API Guidelines checklist](https://rust-lang.github.io/api-guidelines/checklist.html).
-    *   **Task:** Run `cargo clippy -- -D warnings` and fix all lints.
-    *   **Task:** Run `cargo test --all-features` one last time to ensure all tests pass.
-    *   **Task:** Update `Cargo.toml` with the final `version = "0.1.0"`, authors, description, and repository link.
-    *   **Task:** Perform a dry run of publishing with `cargo publish --dry-run`.
-    *   **Task:** (User action) Log in to `crates.io` with `cargo login`.
-    *   **Task:** (User action) Publish the crate with `cargo publish`.
-
 ---
 
 ### Phase 6: Expose Network in Lookup
@@ -200,8 +191,21 @@ documentation, and prepare the crate for its `v0.1.0` release on `crates.io`.
     *   **Task:** Update the `Debug` and `PartialEq` derives on `AsnInfoView` to account for the new field.
     *   **Task:** Ensure all tests pass.
 
-*   **[ ] Chunk 6.2: Update Documentation**
+*   **[x] Chunk 6.2: Update Documentation**
     *   **Task:** Update the `README.md` file to reflect the new `network` field in the `AsnInfoView` struct and adjust the usage examples accordingly.
     *   **Task:** Update the crate-level documentation and the `lookup` method's doc comments in `src/lib.rs` to describe the new `network` field.
     *   **Task:** Run `just bench` to ensure the benchmarks are still good.
     *   **Task:** Run `cargo doc --all-features --open` to verify that all documentation is correct and renders properly.
+
+--- 
+
+### Phase 7: Publish
+
+* **[ ] Chunk 7.1: Final Review & Publish**
+    *   **Task:** Perform a final review of the entire API against the [Rust API Guidelines checklist](https://rust-lang.github.io/api-guidelines/checklist.html).
+    *   **Task:** Run `cargo clippy -- -D warnings` and fix all lints.
+    *   **Task:** Run `cargo test --all-features` one last time to ensure all tests pass.
+    *   **Task:** Update `Cargo.toml` with the final `version = "0.1.0"`, authors, description, and repository link.
+    *   **Task:** Perform a dry run of publishing with `cargo publish --dry-run`.
+    *   **Task:** (User action) Log in to `crates.io` with `cargo login`.
+    *   **Task:** (User action) Publish the crate with `cargo publish`.

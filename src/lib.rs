@@ -20,10 +20,14 @@
 //!     // Perform a lookup.
 //!     let ip: IpAddr = "31.13.100.100".parse().unwrap();
 //!     if let Some(info) = map.lookup(ip) {
+//!         assert_eq!(info.network, "31.13.64.0/18".parse().unwrap());
 //!         assert_eq!(info.asn, 32934);
 //!         assert_eq!(info.country_code, "US");
 //!         assert_eq!(info.organization, "FACEBOOK-AS");
-//!         println!("{ip} -> AS{}: {} ({})", info.asn, info.organization, info.country_code);
+//!         println!(
+//!             "{} -> AS{} {} ({}) in {}",
+//!             ip, info.asn, info.organization, info.country_code, info.network
+//!         );
 //!     }
 //!
 //!     Ok(())
@@ -156,7 +160,8 @@ impl IpAsnMap {
     /// Looks up an IP address, returning a view into its ASN information if found.
     ///
     /// The lookup is a longest-prefix match, ensuring the most specific
-    /// network range is returned.
+    /// network range is returned. The returned `AsnInfoView` includes the
+    /// matching network block itself.
     pub fn lookup(&self, ip: IpAddr) -> Option<AsnInfoView> {
         self.table.longest_match(ip).map(|(network, record)| {
             let organization = &self.organizations[record.organization_idx as usize];
