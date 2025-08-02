@@ -32,7 +32,7 @@ chunk within a phase represents a small, testable unit of work.
     *   **Task:** Refactor the core lookup loop to handle either the list of arguments or the lines from `stdin` as its input.
     *   **TDD: Update the integration test** to cover piping input to the CLI and asserting the correct output.
 
-*   **[ ] Chunk 10.2: JSON Output**
+*   **[x] Chunk 10.2: JSON Output**
     *   **Task:** Add the `--json` / `-j` flag to the `clap` CLI definition.
     *   **Task:** Create a new output module or function that formats the `AsnInfo` struct into the specified JSON structure. The `serde` and `serde_json` crates will be required.
     *   **Task:** In the main loop, check if the `--json` flag is present and call the appropriate formatter.

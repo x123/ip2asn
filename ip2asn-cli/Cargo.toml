@@ -8,8 +8,10 @@ description = "A CLI for the ip2asn crate."
 repository = "https://github.com/x123/ip2asn"
 
 [dependencies]
-ip2asn = { path = ".." }
+ip2asn = { path = "..", features = ["serde"] }
 clap = { version = "4.5.4", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
 [dev-dependencies]
 assert_cmd = "2.0"

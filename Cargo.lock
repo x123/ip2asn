@@ -932,6 +932,8 @@ dependencies = [
  "clap",
  "ip2asn",
  "predicates",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
