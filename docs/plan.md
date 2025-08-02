@@ -239,3 +239,32 @@ documentation, and prepare the crate for its `v0.1.0` release on `crates.io`.
     *   **Task:** Perform a dry run of publishing with `cargo publish --dry-run`.
     *   **Task:** (User action) Log in to `crates.io` with `cargo login`.
     *   **Task:** (User action) Publish the crate with `cargo publish`.
+
+Of course. Here is a detailed implementation plan for Approach 1, formatted as a new phase for the project plan.
+
+### **Phase 8: Ergonomic API Enhancements** 🚀
+
+**Goal:** Implement two key ergonomic improvements based on user feedback: a direct constructor for an empty `IpAsnMap` and an owned lookup variant (`lookup_owned`) to simplify usage in async contexts.
+
+*   **[ ] Chunk 8.1: Implement Empty Map Constructors**
+    *   **Task:** In `src/lib.rs`, implement the `Default` trait for `IpAsnMap`. The `default()` method should return an `IpAsnMap` with an empty `IpNetworkTable` and an empty `Vec<String>` for organizations.
+    *   **Task:** Add a public `IpAsnMap::new()` function that calls `Self::default()` and include a doc comment.
+    *   **TDD: Write a failing test** in `tests/integration.rs`. The test should:
+        *   Create a map using `IpAsnMap::new()`.
+        *   Assert that a lookup for any IP address (e.g., `192.0.2.1`) on this map returns `None`.
+        *   Verify the `Debug` representation of the empty map is reasonable.
+    *   **Task:** Ensure the new test passes.
+
+*   **[ ] Chunk 8.2: Implement Owned Lookup Variant**
+    *   **Task:** In `Cargo.toml`, add a new optional `serde` feature that enables `serde` for this crate and for the `ip_network` dependency.
+    *   **Task:** In `src/lib.rs`, define the new public `AsnInfo` struct, deriving `Debug`, `Clone`, `PartialEq`, and `Eq`. Conditionally derive `serde::Serialize` and `serde::Deserialize` when the `serde` feature is enabled.
+    *   **Task:** Implement `From<AsnInfoView<'_>> for AsnInfo` to handle the conversion from the borrowed view to the new owned struct.
+    *   **Task:** Implement the public `IpAsnMap::lookup_owned(&self, ip: IpAddr) -> Option<AsnInfo>` method, using the `From` implementation for a clean conversion (`.map(Into::into)`).
+    *   **TDD: Write failing tests** in `tests/integration.rs`:
+        *   A test that performs a lookup using `lookup_owned` and asserts the returned `AsnInfo` contains the correct owned data (`String`s).
+        *   A `#[cfg(feature = "serde")]` test that verifies an `AsnInfo` struct can be successfully serialized to JSON and then deserialized back into an identical struct.
+    *   **Task:** Ensure all tests pass.
+
+*   **[ ] Chunk 8.3: Update Documentation**
+    *   **Task:** Add a new section to `README.md` demonstrating the use of `IpAsnMap::new()` and `lookup_owned()`.
+    *   **Task:** Ensure all new public items (`AsnInfo`, `IpAsnMap::new`, `IpAsnMap::lookup_owned`) have comprehensive doc comments.
