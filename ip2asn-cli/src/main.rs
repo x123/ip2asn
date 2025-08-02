@@ -26,9 +26,9 @@ enum Commands {
 
 #[derive(Parser, Debug)]
 struct LookupArgs {
-    /// Path to the IP-to-ASN dataset file (e.g., ip2asn-combined.tsv.gz).
-    #[arg(short, long, required = true)]
-    data: PathBuf,
+    /// Path to the IP-to-ASN dataset file. Defaults to the cached data file.
+    #[arg(short, long)]
+    data: Option<PathBuf>,
 
     /// One or more IP addresses to look up. If not provided, reads from stdin.
     #[arg(name = "IPS")]
@@ -46,20 +46,48 @@ use serde::Serialize;
 struct JsonOutput {
     ip: String,
     found: bool,
-    #[serde(flatten)]
     info: Option<ip2asn::AsnInfo>,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
-    match cli.command {
+    let result = match cli.command {
         Commands::Lookup(args) => run_lookup(args),
         Commands::Update => run_update(),
+    };
+
+    if let Err(e) = result {
+        eprintln!("Error: {}", e);
+        std::process::exit(1);
     }
+
+    Ok(())
 }
 
 fn run_lookup(args: LookupArgs) -> Result<(), Box<dyn Error>> {
-    let map = Builder::new().from_path(&args.data)?.build()?;
+    let (data_path, is_default_path) = match args.data {
+        Some(path) => (path, false),
+        None => {
+            let dirs = directories::ProjectDirs::from("io", "github", "x123")
+                .ok_or("Could not determine cache directory")?;
+            let cache_dir = dirs.cache_dir().join("ip2asn");
+            (cache_dir.join("data.tsv.gz"), true)
+        }
+    };
+
+    if !data_path.exists() {
+        if is_default_path {
+            return Err("Dataset not found. Please run `ip2asn-cli update` to download it.".into());
+        } else {
+            return Err(format!("Data file not found at {}", data_path.display()).into());
+        }
+    }
+
+    let map = Builder::new()
+        .from_path(&data_path)
+        .map_err(|e| format!("Error loading data from file: {}", e))?
+        .build()?;
+
     if !args.ips.is_empty() {
         for ip in &args.ips {
             perform_lookup(&map, &ip.to_string(), args.json);
@@ -121,7 +149,7 @@ fn perform_lookup(map: &IpAsnMap, ip_str: &str, json: bool) {
                 match map.lookup(ip) {
                     Some(info) => {
                         println!(
-                            "{} | {} | {} | {} | {}",
+                            "AS{} | {} | {} | {} | {}",
                             info.asn, ip, info.network, info.organization, info.country_code
                         );
                     }

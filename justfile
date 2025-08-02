@@ -30,15 +30,15 @@ lint:
 # run all tests
 test *extra_args:
     @just lint
-    @cargo nextest run --all-features {{extra_args}}
+    @cargo nextest run --workspace --all-features {{extra_args}}
 
 # run all tests in release mode
 test-release *extra_args:
-    @cargo nextest run --release --all-features {{extra_args}}
+    @cargo nextest run --workspace --release --all-features {{extra_args}}
 
 # run all tests with logs enabled
 test-debug *extra_args:
-    @cargo nextest run --all-features --nocapture {{extra_args}}
+    @cargo nextest run --workspace --all-features --nocapture {{extra_args}}
 
 # Test cargo documentation
 test-doc:

@@ -49,7 +49,7 @@ chunk within a phase represents a small, testable unit of work.
     *   **Task:** Use `indicatif` to display a progress bar during the download.
     *   **Task:** Save the downloaded file to `{USER_CACHE_DIR}/ip2asn/data.tsv.gz`.
 
-*   **[ ] Chunk 11.2: Default Cache Loading**
+*   **[x] Chunk 11.2: Default Cache Loading**
     *   **Task:** Modify the main lookup logic. If the `--data` flag is *not* provided, the tool should now attempt to load the dataset from the default cache location.
     *   **Task:** Implement error handling: if the cache file does not exist, print a helpful error message instructing the user to run `ip2asn-cli update`.
 

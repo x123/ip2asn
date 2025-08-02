@@ -30,6 +30,9 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 wiremock = "0.6.0"
 criterion = { version = "0.6.0", features = ["html_reports"] }
 serde_json = "1.0"
+rstest = "0.21.0"
+mockall = "0.12.1"
+proptest = "1.5.0"
 
 [features]
 fetch = ["dep:reqwest"]
