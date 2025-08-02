@@ -42,7 +42,7 @@ chunk within a phase represents a small, testable unit of work.
 
 **Goal:** Implement the data download and caching mechanism to make the tool self-sufficient.
 
-*   **[ ] Chunk 11.1: The `update` Subcommand**
+*   **[x] Chunk 11.1: The `update` Subcommand**
     *   **Task:** Add an `update` subcommand to the `clap` definition.
     *   **Task:** Implement the handler for the `update` command. It should use the `directories` crate to find the user's cache directory and create an `ip2asn` subdirectory.
     *   **Task:** Use `reqwest` to download the dataset from the URL specified in the spec.

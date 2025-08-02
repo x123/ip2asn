@@ -1,13 +1,31 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use ip2asn::Builder;
 use std::error::Error;
+use std::fs;
+use std::io::{self, BufRead};
 use std::net::IpAddr;
 use std::path::PathBuf;
+
+const DATA_URL: &str = "https://iptoasn.com/data/ip2asn-combined.tsv.gz";
 
 /// A high-performance CLI for mapping IP addresses to AS information.
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    /// Look up IP addresses.
+    Lookup(LookupArgs),
+    /// Download the latest IP-to-ASN dataset.
+    Update,
+}
+
+#[derive(Parser, Debug)]
+struct LookupArgs {
     /// Path to the IP-to-ASN dataset file (e.g., ip2asn-combined.tsv.gz).
     #[arg(short, long, required = true)]
     data: PathBuf,
@@ -23,7 +41,6 @@ struct Cli {
 
 use ip2asn::IpAsnMap;
 use serde::Serialize;
-use std::io::{self, BufRead};
 
 #[derive(Serialize)]
 struct JsonOutput {
@@ -35,20 +52,53 @@ struct JsonOutput {
 
 fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
-    let map = Builder::new().from_path(&cli.data)?.build()?;
+    match cli.command {
+        Commands::Lookup(args) => run_lookup(args),
+        Commands::Update => run_update(),
+    }
+}
 
-    if !cli.ips.is_empty() {
-        for ip in &cli.ips {
-            perform_lookup(&map, &ip.to_string(), cli.json);
+fn run_lookup(args: LookupArgs) -> Result<(), Box<dyn Error>> {
+    let map = Builder::new().from_path(&args.data)?.build()?;
+    if !args.ips.is_empty() {
+        for ip in &args.ips {
+            perform_lookup(&map, &ip.to_string(), args.json);
         }
     } else {
         let stdin = io::stdin();
         for line in stdin.lock().lines() {
             let ip_str = line?;
-            perform_lookup(&map, &ip_str, cli.json);
+            perform_lookup(&map, &ip_str, args.json);
         }
     }
+    Ok(())
+}
 
+fn run_update() -> Result<(), Box<dyn Error>> {
+    let dirs = directories::ProjectDirs::from("io", "github", "x123")
+        .ok_or("Could not determine cache directory")?;
+    let cache_dir = dirs.cache_dir().join("ip2asn");
+    fs::create_dir_all(&cache_dir)?;
+    let data_path = cache_dir.join("data.tsv.gz");
+
+    println!("Downloading dataset to {}...", data_path.display());
+
+    let response = reqwest::blocking::get(DATA_URL)?;
+    response.error_for_status_ref()?;
+    let total_size = response
+        .content_length()
+        .ok_or("Failed to get content length")?;
+
+    let pb = indicatif::ProgressBar::new(total_size);
+    pb.set_style(indicatif::ProgressStyle::default_bar()
+        .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")?
+        .progress_chars("#>-"));
+
+    let mut file = fs::File::create(&data_path)?;
+    let mut reader = pb.wrap_read(response);
+    io::copy(&mut reader, &mut file)?;
+
+    pb.finish_with_message("Download complete");
     Ok(())
 }
 
