@@ -5,66 +5,99 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use tempfile::NamedTempFile;
+use tempfile::{tempdir, NamedTempFile, TempDir};
 
 lazy_static! {
     static ref ENV_MUTEX: Mutex<()> = Mutex::new(());
 }
 
-fn setup_test_data() -> PathBuf {
-    let home_dir = home::home_dir().unwrap();
-    let cache_dir = home_dir.join(".cache/ip2asn");
-    fs::create_dir_all(&cache_dir).unwrap();
-    let data_path = cache_dir.join("data.tsv.gz");
-    fs::copy("../testdata/testdata-small-ip2asn.tsv.gz", &data_path).unwrap();
-    data_path
+/// A test environment guard that sets up a temporary home directory and cleans up on drop.
+///
+/// This ensures that tests do not interfere with the user's actual home directory,
+/// cache, or config files. It works by creating a temporary directory and overriding
+/// the HOME environment variable for the duration of the test.
+struct TestEnv {
+    _temp_dir: TempDir,
+    // Keep config file in scope to prevent premature deletion
+    _config_file: NamedTempFile,
 }
 
-fn setup_test_config(auto_update: bool) -> NamedTempFile {
-    let mut file = NamedTempFile::new().unwrap();
-    writeln!(file, "auto_update = {}", auto_update).unwrap();
-    file
+impl TestEnv {
+    fn new(auto_update: bool) -> Self {
+        let temp_dir = tempdir().unwrap();
+        let home_path = temp_dir.path();
+
+        // Set HOME so the CLI uses the temporary directory for its cache and config.
+        std::env::set_var("HOME", home_path);
+
+        // Create a config file inside the temp dir.
+        let mut config_file = NamedTempFile::new_in(home_path).unwrap();
+        writeln!(config_file, "auto_update = {}", auto_update).unwrap();
+        std::env::set_var("IP2ASN_CONFIG_PATH", config_file.path());
+
+        // Create the cache directory and copy test data into it.
+        let cache_dir = home_path.join(".cache/ip2asn");
+        fs::create_dir_all(&cache_dir).unwrap();
+        let data_path = cache_dir.join("data.tsv.gz");
+        fs::copy("../testdata/testdata-small-ip2asn.tsv.gz", &data_path).unwrap();
+
+        TestEnv {
+            _temp_dir: temp_dir,
+            _config_file: config_file,
+        }
+    }
+}
+
+impl Drop for TestEnv {
+    fn drop(&mut self) {
+        std::env::remove_var("HOME");
+        std::env::remove_var("IP2ASN_CONFIG_PATH");
+    }
 }
 
 #[test]
 fn test_lookup_single_ip() {
     let _guard = ENV_MUTEX.lock().unwrap();
-    let config_file = setup_test_config(false);
-    std::env::set_var("IP2ASN_CONFIG_PATH", config_file.path());
-    setup_test_data();
+    let _env = TestEnv::new(false);
+
+    let mut cmd = Command::cargo_bin("ip2asn").unwrap();
+    cmd.arg("1.1.1.1");
+    cmd.assert().success().stdout(predicate::str::contains(
+        "13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US",
+    ));
+}
+
+#[test]
+fn test_lookup_subcommand_still_works() {
+    let _guard = ENV_MUTEX.lock().unwrap();
+    let _env = TestEnv::new(false);
 
     let mut cmd = Command::cargo_bin("ip2asn").unwrap();
     cmd.arg("lookup").arg("1.1.1.1");
     cmd.assert().success().stdout(predicate::str::contains(
         "13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US",
     ));
-    std::env::remove_var("IP2ASN_CONFIG_PATH");
 }
 
 #[test]
 fn test_lookup_not_found() {
     let _guard = ENV_MUTEX.lock().unwrap();
-    let config_file = setup_test_config(false);
-    std::env::set_var("IP2ASN_CONFIG_PATH", config_file.path());
-    setup_test_data();
+    let _env = TestEnv::new(false);
 
     let mut cmd = Command::cargo_bin("ip2asn").unwrap();
-    cmd.arg("lookup").arg("127.0.0.1");
+    cmd.arg("127.0.0.1");
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("127.0.0.1 | Not Found"));
-    std::env::remove_var("IP2ASN_CONFIG_PATH");
 }
 
 #[test]
 fn test_lookup_stdin() {
     let _guard = ENV_MUTEX.lock().unwrap();
-    let config_file = setup_test_config(false);
-    std::env::set_var("IP2ASN_CONFIG_PATH", config_file.path());
-    setup_test_data();
+    let _env = TestEnv::new(false);
 
     let mut cmd = Command::cargo_bin("ip2asn").unwrap();
-    cmd.arg("lookup");
+    // No args, should read from stdin
     cmd.write_stdin("8.8.8.8\n1.1.1.1\n");
     cmd.assert()
         .success()
@@ -74,21 +107,15 @@ fn test_lookup_stdin() {
         .stdout(predicate::str::contains(
             "13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US",
         ));
-    std::env::remove_var("IP2ASN_CONFIG_PATH");
 }
 
 #[test]
 fn test_lookup_json_output() {
     let _guard = ENV_MUTEX.lock().unwrap();
-    let config_file = setup_test_config(false);
-    std::env::set_var("IP2ASN_CONFIG_PATH", config_file.path());
-    setup_test_data();
+    let _env = TestEnv::new(false);
 
     let mut cmd = Command::cargo_bin("ip2asn").unwrap();
-    cmd.arg("lookup")
-        .arg("--json")
-        .arg("1.1.1.1")
-        .arg("127.0.0.1");
+    cmd.arg("--json").arg("1.1.1.1").arg("127.0.0.1");
     cmd.assert()
         .success()
         .stdout(predicate::str::contains(
@@ -97,14 +124,12 @@ fn test_lookup_json_output() {
         .stdout(predicate::str::contains(
             r#"{"ip":"127.0.0.1","found":false,"info":null}"#,
         ));
-    std::env::remove_var("IP2ASN_CONFIG_PATH");
 }
 
 #[test]
 fn test_lookup_data_file_not_found() {
     let mut cmd = Command::cargo_bin("ip2asn").unwrap();
-    cmd.arg("lookup")
-        .arg("--data")
+    cmd.arg("--data")
         .arg("/tmp/this/path/should/not/exist.tsv.gz")
         .arg("1.1.1.1");
     cmd.assert().failure().stderr(predicate::str::contains(
@@ -121,18 +146,15 @@ mod auto_update_tests {
     #[tokio::test]
     async fn test_auto_update_disabled() {
         let _guard = ENV_MUTEX.lock().unwrap();
-        let config_file = setup_test_config(false);
-        std::env::set_var("IP2ASN_CONFIG_PATH", config_file.path());
+        let _env = TestEnv::new(false);
         std::env::set_var("IP2ASN_TESTING", "1");
-        setup_test_data();
 
         let mut cmd = Command::cargo_bin("ip2asn").unwrap();
-        cmd.arg("lookup").arg("1.1.1.1");
+        cmd.arg("1.1.1.1");
         cmd.assert().success().stdout(
             predicate::str::contains("13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US")
                 .and(predicate::str::contains("Checking for dataset updates...").not()),
         );
-        std::env::remove_var("IP2ASN_CONFIG_PATH");
         std::env::remove_var("IP2ASN_TESTING");
     }
 
@@ -140,10 +162,11 @@ mod auto_update_tests {
     async fn test_auto_update_recent_file() {
         let _guard = ENV_MUTEX.lock().unwrap();
         let server = MockServer::start().await;
-        let config_file = setup_test_config(true);
-        std::env::set_var("IP2ASN_CONFIG_PATH", config_file.path());
+        let _env = TestEnv::new(true);
         std::env::set_var("IP2ASN_TESTING", "1");
-        let data_path = setup_test_data();
+
+        let home_path = std::env::var("HOME").unwrap();
+        let data_path = PathBuf::from(home_path).join(".cache/ip2asn/data.tsv.gz");
 
         // Make the local file seem old to bypass the 24h check.
         let old_time = filetime::FileTime::from_unix_time(1, 0);
@@ -168,7 +191,7 @@ mod auto_update_tests {
             "IP2ASN_DATA_URL",
             server.uri() + "/data/ip2asn-combined.tsv.gz",
         );
-        cmd.arg("lookup").arg("1.1.1.1");
+        cmd.arg("1.1.1.1");
 
         cmd.assert()
             .success()
@@ -177,9 +200,9 @@ mod auto_update_tests {
                 "13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US",
             ));
 
-        std::env::remove_var("IP2ASN_CONFIG_PATH");
         std::env::remove_var("IP2ASN_DATA_URL");
         std::env::remove_var("IP2ASN_TESTING");
+        // _env guard will clean up the rest
     }
 
     #[tokio::test]
@@ -187,10 +210,11 @@ mod auto_update_tests {
         let _guard = ENV_MUTEX.lock().unwrap();
         let _ = tracing_subscriber::fmt().with_test_writer().try_init();
         let server = MockServer::start().await;
-        let config_file = setup_test_config(true);
-        std::env::set_var("IP2ASN_CONFIG_PATH", config_file.path());
+        let _env = TestEnv::new(true);
         std::env::set_var("IP2ASN_TESTING", "1");
-        let data_path = setup_test_data();
+
+        let home_path = std::env::var("HOME").unwrap();
+        let data_path = PathBuf::from(home_path).join(".cache/ip2asn/data.tsv.gz");
 
         // Make the local file seem old
         let old_time = filetime::FileTime::from_unix_time(1, 0);
@@ -223,7 +247,7 @@ mod auto_update_tests {
             "IP2ASN_DATA_URL",
             server.uri() + "/data/ip2asn-combined.tsv.gz",
         );
-        cmd.arg("lookup").arg("8.8.8.8");
+        cmd.arg("8.8.8.8");
 
         cmd.assert()
             .success()
@@ -238,8 +262,8 @@ mod auto_update_tests {
                 "15169 | 8.8.8.8 | 8.8.8.0/24 | GOOGLE | US",
             ));
 
-        std::env::remove_var("IP2ASN_CONFIG_PATH");
         std::env::remove_var("IP2ASN_DATA_URL");
         std::env::remove_var("IP2ASN_TESTING");
+        // _env guard will clean up the rest
     }
 }

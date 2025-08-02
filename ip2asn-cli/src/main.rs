@@ -18,16 +18,17 @@
 //!
 //! ```sh
 //! # Look up a single IP
-//! ip2asn lookup 8.8.8.8
+//! # Look up a single IP (default command)
+//! ip2asn 8.8.8.8
 //! 15169 | 8.8.8.8 | 8.8.8.0/24 | GOOGLE | US
 //!
 //! # Look up multiple IPs from stdin
-//! cat ips.txt | ip2asn lookup
+//! cat ips.txt | ip2asn
 //! 15169 | 8.8.8.8 | 8.8.8.0/24 | GOOGLE | US
 //! 13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US
 //!
 //! # Output in JSON format
-//! ip2asn lookup --json 1.1.1.1 | jq .
+//! ip2asn --json 1.1.1.1 | jq .
 //! {
 //!  "ip": "1.1.1.1",
 //!  "found": true,
@@ -47,7 +48,7 @@
 mod config;
 mod error;
 
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use error::CliError;
 use ip2asn::Builder;
 use std::fs;
@@ -70,9 +71,12 @@ fn get_data_url() -> String {
     long_about = "A high-performance CLI for mapping IP addresses to AS information."
 )]
 struct Cli {
-    /// The command to execute.
+    /// The command to execute. If no command is specified, `lookup` is the default.
     #[command(subcommand)]
-    command: Commands,
+    command: Option<Commands>,
+
+    #[command(flatten)]
+    lookup: LookupArgs,
 }
 
 /// Defines the available subcommands for the CLI.
@@ -92,7 +96,8 @@ enum Commands {
 }
 
 /// Arguments for the `lookup` subcommand.
-#[derive(Parser, Debug)]
+/// Arguments for the `lookup` subcommand.
+#[derive(Args, Debug)]
 struct LookupArgs {
     /// Path to a custom IP-to-ASN dataset file.
     ///
@@ -138,8 +143,9 @@ struct JsonOutput {
 fn main() {
     let cli = Cli::parse();
     let result = match cli.command {
-        Commands::Lookup(args) => run_lookup(args),
-        Commands::Update => run_update(),
+        Some(Commands::Lookup(args)) => run_lookup(args),
+        Some(Commands::Update) => run_update(),
+        None => run_lookup(cli.lookup),
     };
 
     if let Err(e) = result {
