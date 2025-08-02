@@ -18,7 +18,7 @@ fn test_lookup_single_ip() {
     let mut cmd = Command::cargo_bin("ip2asn-cli").unwrap();
     cmd.arg("lookup").arg("1.1.1.1");
     cmd.assert().success().stdout(predicate::str::contains(
-        "AS13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US",
+        "13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US",
     ));
 }
 
@@ -41,10 +41,10 @@ fn test_lookup_stdin() {
     cmd.assert()
         .success()
         .stdout(predicate::str::contains(
-            "AS15169 | 8.8.8.8 | 8.8.8.0/24 | GOOGLE | US",
+            "15169 | 8.8.8.8 | 8.8.8.0/24 | GOOGLE | US",
         ))
         .stdout(predicate::str::contains(
-            "AS13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US",
+            "13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US",
         ));
 }
 

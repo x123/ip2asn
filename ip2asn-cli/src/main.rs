@@ -149,7 +149,7 @@ fn perform_lookup(map: &IpAsnMap, ip_str: &str, json: bool) {
                 match map.lookup(ip) {
                     Some(info) => {
                         println!(
-                            "AS{} | {} | {} | {} | {}",
+                            "{} | {} | {} | {} | {}",
                             info.asn, ip, info.network, info.organization, info.country_code
                         );
                     }
