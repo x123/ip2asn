@@ -4,8 +4,12 @@ version = "0.1.0"
 edition = "2021"
 authors = ["x123 <x123@users.noreply.github.com>"]
 license = "MIT"
-description = "A CLI for the ip2asn crate."
+description = "CLI for the ip2asn crate."
 repository = "https://github.com/x123/ip2asn"
+homepage = "https://github.com/x123/ip2asn"
+documentation = "https://docs.rs/ip2asn"
+keywords = ["cli", "ip", "asn", "network", "lookup"]
+categories = ["command-line-utilities", "network-programming"]
 
 [dependencies]
 ip2asn = { path = "..", features = ["serde"] }

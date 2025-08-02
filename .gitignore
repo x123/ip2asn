@@ -5,6 +5,6 @@ flake.lock
 result
 # Added by cargo
 /target
-/.cargo
+.cargo
 testdata/ip2asn-combined.tsv
 testdata/ip2asn-combined.tsv.gz

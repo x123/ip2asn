@@ -1,7 +1,9 @@
 mod config;
+mod error;
+
 use clap::{Parser, Subcommand};
+use error::CliError;
 use ip2asn::Builder;
-use std::error::Error;
 use std::fs;
 use std::io::{self, BufRead, Write};
 use std::net::IpAddr;
@@ -55,7 +57,7 @@ struct JsonOutput {
     info: Option<ip2asn::AsnInfo>,
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() {
     let cli = Cli::parse();
     let result = match cli.command {
         Commands::Lookup(args) => run_lookup(args),
@@ -66,16 +68,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         eprintln!("Error: {}", e);
         std::process::exit(1);
     }
-
-    Ok(())
 }
 
-fn run_lookup(args: LookupArgs) -> Result<(), Box<dyn Error>> {
-    let config = config::Config::load();
+fn run_lookup(args: LookupArgs) -> Result<(), CliError> {
+    let config = config::Config::load()?;
     let (data_path, is_default_path) = match args.data {
         Some(path) => (path, false),
         None => {
-            let home_dir = home::home_dir().ok_or("Could not determine home directory")?;
+            let home_dir = home::home_dir().ok_or_else(|| {
+                CliError::NotFound("Could not determine home directory".to_string())
+            })?;
             let cache_dir = home_dir.join(".cache/ip2asn");
             (cache_dir.join("data.tsv.gz"), true)
         }
@@ -87,32 +89,34 @@ fn run_lookup(args: LookupArgs) -> Result<(), Box<dyn Error>> {
 
     if !data_path.exists() {
         if is_default_path {
-            return Err("Dataset not found. Please run `ip2asn-cli update` to download it.".into());
+            return Err(CliError::NotFound(
+                "Dataset not found. Please run `ip2asn-cli update` to download it.".to_string(),
+            ));
         } else {
-            return Err(format!("Data file not found at {}", data_path.display()).into());
+            return Err(CliError::NotFound(format!(
+                "Data file not found at {}",
+                data_path.display()
+            )));
         }
     }
 
-    let map = Builder::new()
-        .from_path(&data_path)
-        .map_err(|e| format!("Error loading data from file: {}", e))?
-        .build()?;
+    let map = Builder::new().from_path(&data_path)?.build()?;
 
     if !args.ips.is_empty() {
         for ip in &args.ips {
-            perform_lookup(&map, &ip.to_string(), args.json);
+            perform_lookup(&map, &ip.to_string(), args.json)?;
         }
     } else {
         let stdin = io::stdin();
         for line in stdin.lock().lines() {
             let ip_str = line?;
-            perform_lookup(&map, &ip_str, args.json);
+            perform_lookup(&map, &ip_str, args.json)?;
         }
     }
     Ok(())
 }
 
-fn check_for_updates(config: &config::Config, cache_path: &PathBuf) -> Result<(), Box<dyn Error>> {
+fn check_for_updates(config: &config::Config, cache_path: &PathBuf) -> Result<(), CliError> {
     debug!(?cache_path, "Checking for updates");
     if !config.auto_update {
         debug!("Auto update disabled");
@@ -130,7 +134,9 @@ fn check_for_updates(config: &config::Config, cache_path: &PathBuf) -> Result<()
     let modified_time = metadata.modified()?;
     debug!(?modified_time, "Cache file modified time");
     let now = SystemTime::now();
-    let age = now.duration_since(modified_time)?;
+    let age = now
+        .duration_since(modified_time)
+        .map_err(|e| CliError::Update(format!("System time error: {}", e)))?;
     debug!(?age, "Cache file age");
     if age < Duration::from_secs(24 * 60 * 60) {
         debug!("Cache file is recent, skipping update check");
@@ -144,7 +150,9 @@ fn check_for_updates(config: &config::Config, cache_path: &PathBuf) -> Result<()
     response.error_for_status_ref()?;
 
     if let Some(last_modified) = response.headers().get(reqwest::header::LAST_MODIFIED) {
-        let last_modified_str = last_modified.to_str()?;
+        let last_modified_str = last_modified
+            .to_str()
+            .map_err(|e| CliError::Update(format!("Invalid Last-Modified header: {}", e)))?;
         debug!(%last_modified_str, "Remote Last-Modified header");
         let remote_mtime = httpdate::parse_http_date(last_modified_str)?;
         debug!(?remote_mtime, "Parsed remote mtime");
@@ -161,8 +169,9 @@ fn check_for_updates(config: &config::Config, cache_path: &PathBuf) -> Result<()
     Ok(())
 }
 
-fn run_update() -> Result<(), Box<dyn Error>> {
-    let home_dir = home::home_dir().ok_or("Could not determine home directory")?;
+fn run_update() -> Result<(), CliError> {
+    let home_dir = home::home_dir()
+        .ok_or_else(|| CliError::NotFound("Could not determine home directory".to_string()))?;
     let cache_dir = home_dir.join(".cache/ip2asn");
     fs::create_dir_all(&cache_dir)?;
     let data_path = cache_dir.join("data.tsv.gz");
@@ -174,16 +183,19 @@ fn run_update() -> Result<(), Box<dyn Error>> {
     response.error_for_status_ref()?;
     let total_size = response
         .content_length()
-        .ok_or("Failed to get content length")?;
+        .ok_or_else(|| CliError::Update("Failed to get content length".to_string()))?;
 
     if std::env::var("IP2ASN_TESTING").is_ok() {
         let mut file = fs::File::create(&data_path)?;
         io::copy(&mut response, &mut file)?;
     } else {
         let pb = indicatif::ProgressBar::new(total_size);
-        pb.set_style(indicatif::ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")?
-            .progress_chars("#>-"));
+        pb.set_style(
+            indicatif::ProgressStyle::default_bar()
+                .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+                .map_err(|e| CliError::Update(format!("Indicatif error: {}", e)))?
+                .progress_chars("#>-"),
+        );
 
         let mut file = fs::File::create(&data_path)?;
         let mut reader = pb.wrap_read(response);
@@ -194,10 +206,10 @@ fn run_update() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn perform_lookup(map: &IpAsnMap, ip_str: &str, json: bool) {
+fn perform_lookup(map: &IpAsnMap, ip_str: &str, json: bool) -> Result<(), CliError> {
     let trimmed_ip = ip_str.trim();
     if trimmed_ip.is_empty() {
-        return;
+        return Ok(());
     }
     match trimmed_ip.parse::<IpAddr>() {
         Ok(ip) => {
@@ -208,7 +220,13 @@ fn perform_lookup(map: &IpAsnMap, ip_str: &str, json: bool) {
                     found: result.is_some(),
                     info: result,
                 };
-                println!("{}", serde_json::to_string(&output).unwrap());
+                println!(
+                    "{}",
+                    serde_json::to_string(&output).map_err(|e| CliError::InvalidInput(format!(
+                        "JSON serialization error: {}",
+                        e
+                    )))?
+                );
             } else {
                 match map.lookup(ip) {
                     Some(info) => {
@@ -230,10 +248,17 @@ fn perform_lookup(map: &IpAsnMap, ip_str: &str, json: bool) {
                     found: false,
                     info: None,
                 };
-                println!("{}", serde_json::to_string(&output).unwrap());
+                println!(
+                    "{}",
+                    serde_json::to_string(&output).map_err(|e| CliError::InvalidInput(format!(
+                        "JSON serialization error: {}",
+                        e
+                    )))?
+                );
             } else {
                 eprintln!("Error: Invalid IP address '{}'", trimmed_ip);
             }
         }
     }
+    Ok(())
 }

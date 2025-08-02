@@ -309,9 +309,9 @@ impl IpAsnMap {
 
     /// Looks up an IP address, returning an owned `AsnInfo` struct if found.
     ///
-    /// This method is an alternative to `lookup` that returns an owned `AsnInfo`
-    /// struct rather than a view. This is useful in async contexts or when the
-    /// result needs to be stored or sent across threads.
+    /// This method is an alternative to [`lookup`](#method.lookup) that returns an
+    /// owned [`AsnInfo`] struct rather than a view. This is useful in async
+    /// contexts or when the result needs to be stored or sent across threads.
     ///
     /// # Example
     ///
@@ -339,9 +339,9 @@ impl IpAsnMap {
 
 /// An owned struct containing ASN information for an IP address.
 ///
-/// This struct is returned by the `lookup_owned` method and is useful when
-/// the information needs to be stored or moved, as it does not contain any
-/// lifetimes.
+/// This struct is returned by the [`lookup_owned`](#method.lookup_owned) method
+/// and is useful when the information needs to be stored or moved, as it does not
+/// contain any lifetimes.
 ///
 /// It implements common traits like `Clone`, `Eq`, `Ord`, and `Hash`, and can
 /// be serialized with `serde` if the `serde` feature is enabled.
