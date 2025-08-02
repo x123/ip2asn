@@ -33,7 +33,7 @@ fn test_lookup_single_ip() {
     std::env::set_var("IP2ASN_CONFIG_PATH", config_file.path());
     setup_test_data();
 
-    let mut cmd = Command::cargo_bin("ip2asn-cli").unwrap();
+    let mut cmd = Command::cargo_bin("ip2asn").unwrap();
     cmd.arg("lookup").arg("1.1.1.1");
     cmd.assert().success().stdout(predicate::str::contains(
         "13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US",
@@ -48,7 +48,7 @@ fn test_lookup_not_found() {
     std::env::set_var("IP2ASN_CONFIG_PATH", config_file.path());
     setup_test_data();
 
-    let mut cmd = Command::cargo_bin("ip2asn-cli").unwrap();
+    let mut cmd = Command::cargo_bin("ip2asn").unwrap();
     cmd.arg("lookup").arg("127.0.0.1");
     cmd.assert()
         .success()
@@ -63,7 +63,7 @@ fn test_lookup_stdin() {
     std::env::set_var("IP2ASN_CONFIG_PATH", config_file.path());
     setup_test_data();
 
-    let mut cmd = Command::cargo_bin("ip2asn-cli").unwrap();
+    let mut cmd = Command::cargo_bin("ip2asn").unwrap();
     cmd.arg("lookup");
     cmd.write_stdin("8.8.8.8\n1.1.1.1\n");
     cmd.assert()
@@ -84,7 +84,7 @@ fn test_lookup_json_output() {
     std::env::set_var("IP2ASN_CONFIG_PATH", config_file.path());
     setup_test_data();
 
-    let mut cmd = Command::cargo_bin("ip2asn-cli").unwrap();
+    let mut cmd = Command::cargo_bin("ip2asn").unwrap();
     cmd.arg("lookup")
         .arg("--json")
         .arg("1.1.1.1")
@@ -102,7 +102,7 @@ fn test_lookup_json_output() {
 
 #[test]
 fn test_lookup_data_file_not_found() {
-    let mut cmd = Command::cargo_bin("ip2asn-cli").unwrap();
+    let mut cmd = Command::cargo_bin("ip2asn").unwrap();
     cmd.arg("lookup")
         .arg("--data")
         .arg("/tmp/this/path/should/not/exist.tsv.gz")
@@ -126,7 +126,7 @@ mod auto_update_tests {
         std::env::set_var("IP2ASN_TESTING", "1");
         setup_test_data();
 
-        let mut cmd = Command::cargo_bin("ip2asn-cli").unwrap();
+        let mut cmd = Command::cargo_bin("ip2asn").unwrap();
         cmd.arg("lookup").arg("1.1.1.1");
         cmd.assert().success().stdout(
             predicate::str::contains("13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US")
@@ -163,7 +163,7 @@ mod auto_update_tests {
             .mount(&server)
             .await;
 
-        let mut cmd = Command::cargo_bin("ip2asn-cli").unwrap();
+        let mut cmd = Command::cargo_bin("ip2asn").unwrap();
         cmd.env(
             "IP2ASN_DATA_URL",
             server.uri() + "/data/ip2asn-combined.tsv.gz",
@@ -218,7 +218,7 @@ mod auto_update_tests {
             .mount(&server)
             .await;
 
-        let mut cmd = Command::cargo_bin("ip2asn-cli").unwrap();
+        let mut cmd = Command::cargo_bin("ip2asn").unwrap();
         cmd.env(
             "IP2ASN_DATA_URL",
             server.uri() + "/data/ip2asn-combined.tsv.gz",

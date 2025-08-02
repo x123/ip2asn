@@ -11,6 +11,10 @@ documentation = "https://docs.rs/ip2asn"
 keywords = ["cli", "ip", "asn", "network", "lookup"]
 categories = ["command-line-utilities", "network-programming"]
 
+[[bin]]
+name = "ip2asn"
+path = "src/main.rs"
+
 [dependencies]
 ip2asn = { path = "..", features = ["serde"] }
 clap = { version = "4.5.4", features = ["derive"] }

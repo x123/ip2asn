@@ -1,3 +1,49 @@
+//! # ip2asn-cli
+//!
+//! A high-performance command-line interface for mapping IP addresses to Autonomous
+//! System (AS) information.
+//!
+//! This tool provides two main functions:
+//! 1.  **Lookup**: Resolves one or more IP addresses, provided either as command-line
+//!     arguments or via standard input. Output can be in a human-readable format
+//!     or structured JSON.
+//! 2.  **Update**: Downloads the latest IP-to-ASN dataset from iptoasn.com, ensuring
+//!     lookups are based on current data. The dataset is cached locally.
+//!
+//! The CLI is designed to be fast, efficient, and suitable for interactive use or
+//! integration into automated shell scripts. It automatically handles caching and
+//! periodic updates of the dataset.
+//!
+//! ## Usage
+//!
+//! ```sh
+//! # Look up a single IP
+//! ip2asn lookup 8.8.8.8
+//! 15169 | 8.8.8.8 | 8.8.8.0/24 | GOOGLE | US
+//!
+//! # Look up multiple IPs from stdin
+//! cat ips.txt | ip2asn lookup
+//! 15169 | 8.8.8.8 | 8.8.8.0/24 | GOOGLE | US
+//! 13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US
+//!
+//! # Output in JSON format
+//! ip2asn lookup --json 1.1.1.1 | jq .
+//! {
+//!  "ip": "1.1.1.1",
+//!  "found": true,
+//!  "info": {
+//!    "network": "1.1.1.0/24",
+//!    "asn": 13335,
+//!    "country_code": "US",
+//!    "organization": "CLOUDFLARENET"
+//!  }
+//! }
+//!
+//! # Download the latest dataset
+//! ip2asn update
+//! ```
+
+#![deny(missing_docs)]
 mod config;
 mod error;
 
@@ -16,33 +62,57 @@ fn get_data_url() -> String {
         .unwrap_or_else(|_| "https://iptoasn.com/data/ip2asn-combined.tsv.gz".to_string())
 }
 
-/// A high-performance CLI for mapping IP addresses to AS information.
+/// The main CLI entry point, defining the command-line interface structure.
 #[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
+#[command(
+    version,
+    about,
+    long_about = "A high-performance CLI for mapping IP addresses to AS information."
+)]
 struct Cli {
+    /// The command to execute.
     #[command(subcommand)]
     command: Commands,
 }
 
+/// Defines the available subcommands for the CLI.
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Look up IP addresses.
+    /// Looks up one or more IP addresses and prints their ASN information.
+    ///
+    /// IPs can be passed as arguments or piped via stdin. The command will use
+    /// the cached dataset by default and automatically check if a newer version
+    /// is available.
     Lookup(LookupArgs),
-    /// Download the latest IP-to-ASN dataset.
+    /// Forces an update of the IP-to-ASN dataset.
+    ///
+    /// This command downloads the latest version of the dataset from
+    /// iptoasn.com and stores it in the local cache directory.
     Update,
 }
 
+/// Arguments for the `lookup` subcommand.
 #[derive(Parser, Debug)]
 struct LookupArgs {
-    /// Path to the IP-to-ASN dataset file. Defaults to the cached data file.
+    /// Path to a custom IP-to-ASN dataset file.
+    ///
+    /// If not provided, the CLI will use the default cached dataset located in
+    /// `$HOME/.cache/ip2asn/data.tsv.gz`.
     #[arg(short, long)]
     data: Option<PathBuf>,
 
-    /// One or more IP addresses to look up. If not provided, reads from stdin.
+    /// One or more IP addresses to look up.
+    ///
+    /// If no IPs are provided as arguments, the command will read them from
+    /// standard input, one per line.
     #[arg(name = "IPS")]
     ips: Vec<IpAddr>,
 
-    /// Output results in JSON format.
+    /// Formats the output as JSON.
+    ///
+    /// Each line of output will be a JSON object containing the lookup
+    /// details, including the original IP, whether it was found, and the
+    /// corresponding ASN information.
     #[arg(short, long)]
     json: bool,
 }
@@ -50,13 +120,21 @@ struct LookupArgs {
 use ip2asn::IpAsnMap;
 use serde::Serialize;
 
+/// Represents the structured output for a single lookup in JSON format.
 #[derive(Serialize)]
 struct JsonOutput {
+    /// The IP address that was looked up.
     ip: String,
+    /// A boolean indicating whether a record was found for the IP.
     found: bool,
+    /// The ASN information, present only if a record was found.
     info: Option<ip2asn::AsnInfo>,
 }
 
+/// The main function of the application.
+///
+/// Parses command-line arguments, dispatches to the appropriate subcommand
+/// handler, and prints any resulting errors to stderr before exiting.
 fn main() {
     let cli = Cli::parse();
     let result = match cli.command {
@@ -70,6 +148,14 @@ fn main() {
     }
 }
 
+/// Handles the `lookup` subcommand logic.
+///
+/// This function orchestrates the lookup process:
+/// 1. Loads the configuration.
+/// 2. Determines the data file path (either user-provided or default cache).
+/// 3. Checks for dataset updates if using the default path.
+/// 4. Builds the `IpAsnMap` from the data file.
+/// 5. Reads IPs from arguments or stdin and performs the lookups.
 fn run_lookup(args: LookupArgs) -> Result<(), CliError> {
     let config = config::Config::load()?;
     let (data_path, is_default_path) = match args.data {
@@ -90,7 +176,7 @@ fn run_lookup(args: LookupArgs) -> Result<(), CliError> {
     if !data_path.exists() {
         if is_default_path {
             return Err(CliError::NotFound(
-                "Dataset not found. Please run `ip2asn-cli update` to download it.".to_string(),
+                "Dataset not found. Please run `ip2asn update` to download it.".to_string(),
             ));
         } else {
             return Err(CliError::NotFound(format!(
@@ -116,6 +202,11 @@ fn run_lookup(args: LookupArgs) -> Result<(), CliError> {
     Ok(())
 }
 
+/// Checks if a newer version of the dataset is available and triggers an update.
+///
+/// This check is only performed if auto-updates are enabled and the cached
+/// dataset is more than 24 hours old. It compares the local file's modification
+/// time with the `Last-Modified` header from the remote server.
 fn check_for_updates(config: &config::Config, cache_path: &PathBuf) -> Result<(), CliError> {
     debug!(?cache_path, "Checking for updates");
     if !config.auto_update {
@@ -169,6 +260,10 @@ fn check_for_updates(config: &config::Config, cache_path: &PathBuf) -> Result<()
     Ok(())
 }
 
+/// Handles the `update` subcommand logic.
+///
+/// This function ensures the cache directory exists, then downloads the dataset
+/// from the remote URL, displaying a progress bar during the download.
 fn run_update() -> Result<(), CliError> {
     let home_dir = home::home_dir()
         .ok_or_else(|| CliError::NotFound("Could not determine home directory".to_string()))?;
@@ -206,6 +301,11 @@ fn run_update() -> Result<(), CliError> {
     Ok(())
 }
 
+/// Performs a lookup for a single IP address and prints the result.
+///
+/// This function parses the IP string, queries the `IpAsnMap`, and prints the
+/// output in either human-readable or JSON format based on the `json` flag.
+/// It handles invalid IP formats gracefully.
 fn perform_lookup(map: &IpAsnMap, ip_str: &str, json: bool) -> Result<(), CliError> {
     let trimmed_ip = ip_str.trim();
     if trimmed_ip.is_empty() {
