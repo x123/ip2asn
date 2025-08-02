@@ -10,7 +10,7 @@ chunk within a phase represents a small, testable unit of work.
 
 **Goal:** Establish the `ip2asn-cli` crate within a Cargo workspace and implement the foundational lookup logic, reading IPs from command-line arguments and loading the dataset from an explicit file path.
 
-*   **[ ] Chunk 9.1: Workspace & Crate Setup**
+*   **[x] Chunk 9.1: Workspace & Crate Setup**
     *   **Task:** Modify the root `Cargo.toml` to define a workspace.
     *   **Task:** Create the `ip2asn-cli` directory with a default `main.rs` and `Cargo.toml`.
     *   **Task:** In `ip2asn-cli/Cargo.toml`, add the required dependencies (`ip2asn` with a path, `clap`, etc.) as specified in `docs/spec-ip2asn-cli.md`.
@@ -23,7 +23,7 @@ chunk within a phase represents a small, testable unit of work.
     *   **Task:** Implement the human-readable, pipe-separated output format and print results to `stdout`.
     *   **TDD: Write a simple integration test** that runs the compiled CLI binary with a test dataset and asserts the correct output for a known IP.
 
-### **Phase 10: Enhanced I/O & Formatting** 🔄
+### **Phase 10: Enhanced I/O & Formatting**
 
 **Goal:** Expand the CLI's input/output capabilities to support reading from `stdin` and formatting output as JSON.
 
@@ -38,7 +38,7 @@ chunk within a phase represents a small, testable unit of work.
     *   **Task:** In the main loop, check if the `--json` flag is present and call the appropriate formatter.
     *   **TDD: Add a new integration test** that runs the CLI with the `--json` flag and validates the output is correct JSON.
 
-### **Phase 11: Data Management & Caching** 💾
+### **Phase 11: Data Management & Caching**
 
 **Goal:** Implement the data download and caching mechanism to make the tool self-sufficient.
 
@@ -53,7 +53,7 @@ chunk within a phase represents a small, testable unit of work.
     *   **Task:** Modify the main lookup logic. If the `--data` flag is *not* provided, the tool should now attempt to load the dataset from the default cache location.
     *   **Task:** Implement error handling: if the cache file does not exist, print a helpful error message instructing the user to run `ip2asn-cli update`.
 
-### **Phase 12: Automation & Configuration** ⚙️
+### **Phase 12: Automation & Configuration**
 
 **Goal:** Add the final layer of automation, allowing the tool to check for updates automatically based on a user configuration file.
 

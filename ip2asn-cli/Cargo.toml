@@ -1,0 +1,12 @@
+[package]
+name = "ip2asn-cli"
+version = "0.1.0"
+edition = "2021"
+authors = ["x123 <x123@users.noreply.github.com>"]
+license = "MIT"
+description = "A CLI for the ip2asn crate."
+repository = "https://github.com/x123/ip2asn"
+
+[dependencies]
+ip2asn = { path = ".." }
+clap = { version = "4.5.4", features = ["derive"] }
