@@ -52,7 +52,7 @@ chunk within a phase represents a small, testable unit of work.
 
 ---
 
-Excellent. Here is the detailed plan for Phase 3, formatted for `prompt_plan.md`, based on the "Sequential Assembly Line" approach.
+Excellent. Here is the detailed plan for Phase 3, formatted for `docs/prompt_plan.md`, based on the "Sequential Assembly Line" approach.
 
 ### **Phase 3: Building & Querying the Map** 🗺️
 
@@ -98,7 +98,7 @@ source.
     *   **Task:** Ensure all tests pass.
 
 ---
-Excellent. Here is the detailed plan for Phase 4, formatted for `prompt_plan.md`, based on our discussion of Approach 1.
+Excellent. Here is the detailed plan for Phase 4, formatted for `docs/prompt_plan.md`, based on our discussion of Approach 1.
 
 ---
 
@@ -163,17 +163,17 @@ documentation, and prepare the crate for its `v0.1.0` release on `crates.io`.
     *   **Task:** Add `criterion` as a `dev-dependency` in `Cargo.toml` and disable its default features.
     *   **Task:** Create a `benches/` directory with a `main.rs` file.
     *   **Task:** Download a large, real-world `ip2asn` dataset (e.g., from `iptoasn.com`) and place it in a `testdata/` subdirectory that is gitignored.
-    *   **Task:** Implement the benchmark suite as defined in `spec.md`:
+    *   **Task:** Implement the benchmark suite as defined in `docs/spec.md`:
         1.  **`build_benchmark`**: Measures the time to build the `IpAsnMap` from the large dataset file.
         2.  **`lookup_ipv4_hit_benchmark`**: Measures lookup speed for a random sample of IPv4 addresses known to be in the dataset.
         3.  **`lookup_ipv6_hit_benchmark`**: Measures lookup speed for a random sample of IPv6 addresses.
         4.  **`lookup_miss_benchmark`**: Measures lookup speed for addresses known *not* to be in the dataset (e.g., private ranges, reserved addresses).
-    *   **Task:** Run `cargo bench` and analyze the results. Ensure the lookup performance meets the `< 500ns` goal specified in `spec.md`.
+    *   **Task:** Run `cargo bench` and analyze the results. Ensure the lookup performance meets the `< 500ns` goal specified in `docs/spec.md`.
 
 * **[x] Chunk 5.3: Document the Final Product**
     *   **Task:** Write comprehensive crate-level documentation (`//!`) in `src/lib.rs`. This should cover the crate's purpose, core concepts, features (`fetch`), and a basic usage example.
     *   **Task:** Write detailed documentation for every public item (`IpAsnMap`, `Builder`, `AsnInfoView`, `Error`, and all their public methods), including examples where appropriate.
-    *   **Task:** Add the full, runnable async usage examples for both `tokio` and `smol` to the crate-level documentation, as specified in `spec.md`.
+    *   **Task:** Add the full, runnable async usage examples for both `tokio` and `smol` to the crate-level documentation, as specified in `docs/spec.md`.
     *   **Task:** Create a high-quality `README.md` file for the GitHub repository, including badges (`crates.io`, `docs.rs`), a summary, usage examples, and a note on performance.
     *   **Task:** Run `cargo doc --open` to preview the generated documentation and fix any rendering issues or missing items.
 

@@ -31,15 +31,15 @@ This document outlines the core principles, workflows, and coding standards for 
 
 As the AI developer, Roo MUST strictly follow this protocol for all tasks:
 
-1.  **Understand & Plan:** Before coding, state your understanding of the task. Read `spec.md` and `prompt_plan.md` for implementation details.
+1.  **Understand & Plan:** Before coding, state your understanding of the task. Read `docs/spec.md` and `docs/prompt_plan.md` for implementation details.
 2.  **Test-Driven Development (TDD):** Create or update tests that fail before implementing the feature.
 3.  **Implement:** Write the code to fulfill the task requirements.
 4.  **Lint & Format:** Run `just lint` and fix all warnings and formatting issues.
 5.  **Test & Debug:** Run the full test suite with `just test` or `just test-debug` (for individual tests with verbose tracing output). If tests fail, add `debug!` tracing and resolve all failures.
 6.  **Journal:** If any significant challenges were faced or significant decisions were made, make a concise note of them in `journal.md`.
 7.  **README.md:** If any changes require updates to the `README.md`, you MUST make them.
-8.  **Update Plan:** Mark the task as complete (`[x]`) in `prompt_plan.md`.
-9.  **Update Spec:** If significant changes have been made that are materially different than `spec.md`, update the document and request a review.
+8.  **Update Plan:** Mark the task as complete (`[x]`) in `docs/prompt_plan.md`.
+9.  **Update Spec:** If significant changes have been made that are materially different than `docs/spec.md`, update the document and request a review.
 10. **Propose Commit:** Suggest a well-structured commit message.
 11. **Await Approval:** Do not proceed to the next task until the user has approved the changes.
 
