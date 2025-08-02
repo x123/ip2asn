@@ -39,9 +39,22 @@ pub struct Builder { /* private fields */ }
 /// This struct is returned by the `lookup` method.
 #[derive(Debug, PartialEq, Eq)]
 pub struct AsnInfoView<'a> {
+    pub network: IpNetwork,
     pub asn: u32,
     pub country_code: &'a str,
     pub organization: &'a str,
+}
+
+/// An owned, lifetime-free struct containing ASN information.
+/// This struct is returned by the `lookup_owned` method and is useful
+/// for async or multi-threaded applications.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct AsnInfo {
+    pub network: IpNetwork,
+    pub asn: u32,
+    pub country_code: String,
+    pub organization: String,
 }
 
 /// The primary error type for the crate.
@@ -58,9 +71,10 @@ pub enum Warning { /* see section 5.3 */ }
 ```rust
 // In impl IpAsnMap
 impl IpAsnMap {
-    /// Creates a new builder for constructing an `IpAsnMap`.
-    pub fn builder() -> Builder {
-        Builder::new()
+    /// Creates a new, empty `IpAsnMap`.
+    /// This is useful for applications that may load data later or start empty.
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// Performs a longest-prefix match for the given IP address.
@@ -71,6 +85,19 @@ impl IpAsnMap {
         // ...
     }
 
+    /// Performs a lookup and returns an owned `AsnInfo` struct.
+    /// This is ideal for async contexts or when the result needs to be stored,
+    /// as it avoids the lifetime constraints of `AsnInfoView`.
+    pub fn lookup_owned(&self, ip: std::net::IpAddr) -> Option<AsnInfo> {
+        self.lookup(ip).map(AsnInfo::from)
+    }
+}
+
+impl Default for IpAsnMap {
+    /// Creates a new, empty `IpAsnMap`.
+    fn default() -> Self {
+        // ...
+    }
 }
 ```
 
@@ -215,9 +242,12 @@ pub enum Warning {
 ## **5. Cargo Features**
 
   * `fetch`:
-      * Enables the `builder.with_url()` method.
-	  * Adds a dependency on `reqwest`, using its `blocking` client to ensure
-		the crate remains runtime-agnostic.
+    * Enables the `builder.with_url()` method.
+    * Adds a dependency on `reqwest`, using its `blocking` client to ensure
+	  the crate remains runtime-agnostic.
+  * `serde`:
+    * Enables serialization and deserialization for the `AsnInfo` struct.
+    * Adds a dependency on `serde` and enables the `serde` feature in the `ip_network` crate.
 
 -----
 
@@ -225,10 +255,14 @@ pub enum Warning {
 
   * **Runtime-Agnostic Design**: The core library API is **100% synchronous**.
 	It has no dependency on `tokio`, `smol`, or any other async runtime.
-  * **Documentation**: The crate-level documentation MUST provide clear,
-	runnable examples showing how to use the library within both `tokio` and `smol`
-	by wrapping the blocking `build()` call in `tokio::task::spawn_blocking` and
-	`smol::unblock`, respectively.
+  * **Primary Solution**: The `lookup_owned()` method is the primary solution for
+    using the map in async contexts. It returns an owned `AsnInfo` struct that is
+    `Send + Sync` and has no lifetime constraints, making it safe to store, move
+    between threads, or use in async functions without `unsafe` code.
+  * **Documentation**: The crate-level documentation MUST provide clear examples
+    of using `lookup_owned()` in an async context. It should still mention the
+    `spawn_blocking` pattern for the initial, potentially long-running `build()`
+    call.
 
 -----
 

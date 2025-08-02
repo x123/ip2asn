@@ -10,14 +10,26 @@ Autonomous System (AS) information with sub-microsecond lookups.
 
 ## Features
 
-  * **High Performance**: Sub-microsecond longest-prefix match lookups using a PATRICIA trie (`ip_network_table`).
-  * **Memory Efficient**: Uses string interning and optimized data structures to minimize memory footprint.
-  * **Ergonomic API**: A simple, chainable Builder pattern for easy configuration and map creation.
-  * **Flexible Data Sources**: Load data from any `std::io::Read` source (files, in-memory buffers, etc.).
-  * **Gzip Support**: Transparently decompresses `.gz` data sources out of the box.
-  * **Remote Fetching**: An optional `fetch` feature allows building the map directly from a URL.
-  * **Robust Error Handling**: Supports a `strict` mode to fail on any parsing error and a flexible `on_warning` callback for custom logging.
-  * **Runtime Agnostic**: A fully synchronous core library that works with any async runtime (`tokio`, `smol`, etc.) or in non-async applications.
+* **High Performance**: Sub-microsecond longest-prefix match lookups using a
+  PATRICIA trie (`ip_network_table`).
+* **Memory Efficient**: Uses string interning and optimized data structures to
+  minimize memory footprint.
+* **Ergonomic API**: A simple, chainable Builder pattern for easy configuration
+  and map creation.
+* **Flexible Data Sources**: Load data from any `std::io::Read` source (files,
+  in-memory buffers, etc.).
+* **Gzip Support**: Transparently decompresses `.gz` data sources out of the
+  box.
+* **Remote Fetching**: An optional `fetch` feature allows building the map
+  directly from a URL.
+* **Async-Friendly Lookups**: An owned `AsnInfo` struct is available via
+  `lookup_owned()` for safe, lifetime-free use in async or threaded contexts.
+* **Serde Support**: An optional `serde` feature allows `AsnInfo` to be
+  serialized and deserialized.
+* **Robust Error Handling**: Supports a `strict` mode to fail on any parsing
+  error and a flexible `on_warning` callback for custom logging.
+* **Runtime Agnostic**: A fully synchronous core library that works with any
+  async runtime (`tokio`, `smol`, etc.) or in non-async applications.
 
 -----
 
@@ -27,7 +39,7 @@ Add `ip2asn` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ip2asn = "0.1.0"
+ip2asn = "0.1.1"
 ```
 
 Then, use the `Builder` to load your data and perform lookups.
@@ -62,6 +74,41 @@ fn main() -> Result<(), ip2asn::Error> {
 }
 ```
 
+### Creating an Empty Map
+
+For applications that start with an empty map and load data later, you can use
+`IpAsnMap::new()` or `Default::default()`.
+
+```rust
+use ip2asn::IpAsnMap;
+
+let empty_map = IpAsnMap::new();
+assert!(empty_map.lookup("8.8.8.8".parse().unwrap()).is_none());
+```
+
+### Async-Friendly Lookups
+
+The standard `lookup` method returns a view with a lifetime tied to the map.
+For async code or situations where you need to store the result, use
+`lookup_owned`.
+
+```rust
+use ip2asn::{Builder, AsnInfo}; // Note: AsnInfo is the owned struct
+use std::net::IpAddr;
+# fn main() -> Result<(), ip2asn::Error> {
+# let data = "1.0.0.0\t1.0.0.255\t13335\tAU\tCLOUDFLARENET";
+# let map = Builder::new().with_source(data.as_bytes())?.build()?;
+let ip: IpAddr = "1.0.0.1".parse().unwrap();
+
+// `lookup_owned` returns an `Option<AsnInfo>` with no lifetime.
+if let Some(info) = map.lookup_owned(ip) {
+    // This `info` object can be sent across threads or stored.
+    assert_eq!(info.asn, 13335);
+}
+# Ok(())
+# }
+```
+
 ### Fetching from a URL
 
 With the `fetch` feature enabled, you can build the map directly from a remote
@@ -69,7 +116,7 @@ data source.
 
 ```toml
 [dependencies]
-ip2asn = { version = "0.1.0", features = ["fetch"] }
+ip2asn = { version = "0.1.1", features = ["fetch"] }
 ```
 
 ```rust
@@ -88,6 +135,36 @@ fn main() -> Result<(), ip2asn::Error> {
     }
     Ok(())
 }
+```
+
+### Serialization with Serde
+
+Enable the `serde` feature to serialize and deserialize the `AsnInfo` struct.
+
+```toml
+[dependencies]
+ip2asn = { version = "0.1.1", features = ["serde"] }
+serde_json = "1.0"
+```
+
+```rust
+# #[cfg(feature = "serde")]
+# fn main() -> Result<(), Box<dyn std::error::Error>> {
+# use ip2asn::{Builder, AsnInfo};
+# let data = "1.0.0.0\t1.0.0.255\t13335\tAU\tCLOUDFLARENET";
+# let map = Builder::new().with_source(data.as_bytes())?.build()?;
+# let info = map.lookup_owned("1.0.0.1".parse()?).unwrap();
+// Serialize the owned `AsnInfo` struct.
+let serialized = serde_json::to_string(&info)?;
+println!("{}", serialized);
+
+// Deserialize it back.
+let deserialized: AsnInfo = serde_json::from_str(&serialized)?;
+assert_eq!(info, deserialized);
+# Ok(())
+# }
+# #[cfg(not(feature = "serde"))]
+# fn main() {}
 ```
 
 ### Error Handling
