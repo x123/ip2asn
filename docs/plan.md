@@ -255,7 +255,7 @@ Of course. Here is a detailed implementation plan for Approach 1, formatted as a
         *   Verify the `Debug` representation of the empty map is reasonable.
     *   **Task:** Ensure the new test passes.
 
-*   **[ ] Chunk 8.2: Implement Owned Lookup Variant**
+*   **[x] Chunk 8.2: Implement Owned Lookup Variant**
     *   **Task:** In `Cargo.toml`, add a new optional `serde` feature that enables `serde` for this crate and for the `ip_network` dependency.
     *   **Task:** In `src/lib.rs`, define the new public `AsnInfo` struct, deriving `Debug`, `Clone`, `PartialEq`, and `Eq`. Conditionally derive `serde::Serialize` and `serde::Deserialize` when the `serde` feature is enabled.
     *   **Task:** Implement `From<AsnInfoView<'_>> for AsnInfo` to handle the conversion from the borrowed view to the new owned struct.

@@ -11,18 +11,21 @@ keywords = ["ip", "asn", "geoip", "network", "lookup"]
 categories = ["network-programming", "parser-implementations", "data-structures"]
 
 [dependencies]
-ip_network = { version = "0.4.1", features = ["serde"] }
+ip_network = { version = "0.4.1" }
 ip_network_table = { version = "0.2.0" }
 flate2 = "1.0"
 reqwest = { version = "0.12.5", features = ["blocking"], optional = true }
+serde = { version = "1.0", features = ["derive"], optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 wiremock = "0.6.0"
 criterion = { version = "0.6.0", features = ["html_reports"] }
+serde_json = "1.0"
 
 [features]
 fetch = ["dep:reqwest"]
+serde = ["dep:serde", "ip_network/serde"]
 
 [[bench]]
 name = "lookup_benchmark"

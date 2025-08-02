@@ -294,3 +294,38 @@ fn test_new_empty_map() {
     let debug_repr = format!("{:?}", map);
     assert_eq!(debug_repr, "IpAsnMap { organizations: 0, .. }");
 }
+
+#[test]
+fn test_lookup_owned() {
+    let map: IpAsnMap = Builder::new()
+        .with_source(TEST_DATA.as_bytes())
+        .unwrap()
+        .build()
+        .unwrap();
+
+    let result = map.lookup_owned("1.0.2.10".parse().unwrap()).unwrap();
+    assert_eq!(result.network, "1.0.2.0/23".parse::<IpNetwork>().unwrap());
+    assert_eq!(result.asn, 38040);
+    assert_eq!(result.country_code, "AU");
+    assert_eq!(result.organization, "GTELECOM");
+
+    // Test a miss
+    assert!(map.lookup_owned("127.0.0.1".parse().unwrap()).is_none());
+}
+
+#[cfg(feature = "serde")]
+#[test]
+fn test_asn_info_serde() {
+    let map: IpAsnMap = Builder::new()
+        .with_source(TEST_DATA.as_bytes())
+        .unwrap()
+        .build()
+        .unwrap();
+
+    let info = map.lookup_owned("1.0.0.1".parse().unwrap()).unwrap();
+
+    let serialized = serde_json::to_string(&info).unwrap();
+    let deserialized = serde_json::from_str(&serialized).unwrap();
+
+    assert_eq!(info, deserialized);
+}

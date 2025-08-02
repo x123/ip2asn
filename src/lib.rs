@@ -296,6 +296,45 @@ impl IpAsnMap {
             }
         })
     }
+
+    /// Looks up an IP address, returning an owned `AsnInfo` struct if found.
+    ///
+    /// This method is an alternative to `lookup` that returns an owned `AsnInfo`
+    /// struct rather than a view. This is useful in async contexts or when the
+    /// result needs to be stored or sent across threads.
+    pub fn lookup_owned(&self, ip: IpAddr) -> Option<AsnInfo> {
+        self.lookup(ip).map(AsnInfo::from)
+    }
+}
+
+/// An owned struct containing ASN information for an IP address.
+///
+/// This struct is returned by the `lookup_owned` method and is useful when
+/// the information needs to be stored or moved, as it does not contain any
+/// lifetimes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[non_exhaustive]
+pub struct AsnInfo {
+    /// The matching IP network block for the looked-up address.
+    pub network: IpNetwork,
+    /// The Autonomous System Number (ASN).
+    pub asn: u32,
+    /// The two-letter ISO 3166-1 alpha-2 country code.
+    pub country_code: String,
+    /// The common name of the organization that owns the IP range.
+    pub organization: String,
+}
+
+impl<'a> From<AsnInfoView<'a>> for AsnInfo {
+    fn from(view: AsnInfoView<'a>) -> Self {
+        Self {
+            network: view.network,
+            asn: view.asn,
+            country_code: view.country_code.to_string(),
+            organization: view.organization.to_string(),
+        }
+    }
 }
 
 /// A builder for configuring and loading an `IpAsnMap`.
