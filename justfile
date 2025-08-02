@@ -14,6 +14,13 @@ clippy:
 cargo-deny:
     @cargo deny check
 
+# Do it all
+all:
+    @just lint
+    @just test
+    @just build
+    @just test-doc
+
 # Run all lints
 lint:
     @just cargo-deny
@@ -32,6 +39,14 @@ test-release *extra_args:
 # run all tests with logs enabled
 test-debug *extra_args:
     @cargo nextest run --all-features --nocapture {{extra_args}}
+
+# Test cargo documentation
+test-doc:
+    @cargo test --doc
+
+# Build all workspace packages in release mode
+build:
+    @cargo build --release --workspace
 
 # cargo-audit
 audit:

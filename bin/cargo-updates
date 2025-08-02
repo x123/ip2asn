@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -xeuo pipefail
+
+echo "Cargo files:"
+find ./ -type f -name "Cargo.toml" -not -path './.cargo/**' -exec cargo update --dry-run --verbose --manifest-path '{}' \;
+
