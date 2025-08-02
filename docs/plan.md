@@ -16,7 +16,7 @@ chunk within a phase represents a small, testable unit of work.
     *   **Task:** In `ip2asn-cli/Cargo.toml`, add the required dependencies (`ip2asn` with a path, `clap`, etc.) as specified in `docs/spec-ip2asn-cli.md`.
     *   **Task:** Ensure `cargo check --workspace` passes.
 
-*   **[ ] Chunk 9.2: Basic Argument Parsing & Lookup**
+*   **[x] Chunk 9.2: Basic Argument Parsing & Lookup**
     *   **Task:** In `ip2asn-cli/src/main.rs`, use `clap` to define the CLI structure. It should accept one or more positional IP address arguments and a `--data <PATH>` option.
     *   **Task:** Implement the core loop: iterate through the IP address arguments, parse them, and perform a lookup using the `ip2asn` library.
     *   **Task:** The `IpAsnMap` should be built from the file provided by the `--data` option.

@@ -10,3 +10,7 @@ repository = "https://github.com/x123/ip2asn"
 [dependencies]
 ip2asn = { path = ".." }
 clap = { version = "4.5.4", features = ["derive"] }
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.1"
