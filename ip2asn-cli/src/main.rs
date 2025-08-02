@@ -75,9 +75,8 @@ fn run_lookup(args: LookupArgs) -> Result<(), Box<dyn Error>> {
     let (data_path, is_default_path) = match args.data {
         Some(path) => (path, false),
         None => {
-            let base_dirs =
-                directories::BaseDirs::new().ok_or("Could not determine cache directory")?;
-            let cache_dir = base_dirs.cache_dir().join("ip2asn");
+            let home_dir = home::home_dir().ok_or("Could not determine home directory")?;
+            let cache_dir = home_dir.join(".cache/ip2asn");
             (cache_dir.join("data.tsv.gz"), true)
         }
     };
@@ -163,8 +162,8 @@ fn check_for_updates(config: &config::Config, cache_path: &PathBuf) -> Result<()
 }
 
 fn run_update() -> Result<(), Box<dyn Error>> {
-    let base_dirs = directories::BaseDirs::new().ok_or("Could not determine cache directory")?;
-    let cache_dir = base_dirs.cache_dir().join("ip2asn");
+    let home_dir = home::home_dir().ok_or("Could not determine home directory")?;
+    let cache_dir = home_dir.join(".cache/ip2asn");
     fs::create_dir_all(&cache_dir)?;
     let data_path = cache_dir.join("data.tsv.gz");
 

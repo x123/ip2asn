@@ -10,8 +10,8 @@ impl Config {
     pub fn load() -> Self {
         let config_path = if let Ok(path) = std::env::var("IP2ASN_CONFIG_PATH") {
             std::path::PathBuf::from(path)
-        } else if let Some(base_dirs) = directories::BaseDirs::new() {
-            base_dirs.config_dir().join("ip2asn/config.toml")
+        } else if let Some(home_dir) = home::home_dir() {
+            home_dir.join(".config/ip2asn/config.toml")
         } else {
             return Self { auto_update: false };
         };
