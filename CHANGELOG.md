@@ -19,3 +19,5 @@ Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 ### Changed
 
 - `IpAsnMap` now implements the `Default` trait.
+- `AsnInfo` now implements `PartialOrd`, `Ord`, and `Hash`. The sort order is
+  `asn`, `network`, `country_code`, then `organization`.
