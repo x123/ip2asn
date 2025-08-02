@@ -255,7 +255,24 @@ impl fmt::Debug for IpAsnMap {
     }
 }
 
+impl Default for IpAsnMap {
+    /// Creates a new, empty `IpAsnMap`.
+    fn default() -> Self {
+        Self {
+            table: IpNetworkTable::new(),
+            organizations: Vec::new(),
+        }
+    }
+}
+
 impl IpAsnMap {
+    /// Creates a new, empty `IpAsnMap`.
+    ///
+    /// This is a convenience method equivalent to `IpAsnMap::default()`.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     /// Creates a new `Builder` for constructing an `IpAsnMap`.
     ///
     /// This is a convenience method equivalent to `Builder::new()`.

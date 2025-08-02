@@ -246,7 +246,7 @@ Of course. Here is a detailed implementation plan for Approach 1, formatted as a
 
 **Goal:** Implement two key ergonomic improvements based on user feedback: a direct constructor for an empty `IpAsnMap` and an owned lookup variant (`lookup_owned`) to simplify usage in async contexts.
 
-*   **[ ] Chunk 8.1: Implement Empty Map Constructors**
+*   **[x] Chunk 8.1: Implement Empty Map Constructors**
     *   **Task:** In `src/lib.rs`, implement the `Default` trait for `IpAsnMap`. The `default()` method should return an `IpAsnMap` with an empty `IpNetworkTable` and an empty `Vec<String>` for organizations.
     *   **Task:** Add a public `IpAsnMap::new()` function that calls `Self::default()` and include a doc comment.
     *   **TDD: Write a failing test** in `tests/integration.rs`. The test should:

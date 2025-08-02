@@ -281,3 +281,16 @@ mod fetch_tests {
         }
     }
 }
+
+#[test]
+fn test_new_empty_map() {
+    let map = IpAsnMap::new();
+
+    // Assert that a lookup for any IP address returns None.
+    let ip = "192.0.2.1".parse().unwrap();
+    assert!(map.lookup(ip).is_none());
+
+    // Verify the Debug representation is reasonable.
+    let debug_repr = format!("{:?}", map);
+    assert_eq!(debug_repr, "IpAsnMap { organizations: 0, .. }");
+}
