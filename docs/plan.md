@@ -57,7 +57,7 @@ chunk within a phase represents a small, testable unit of work.
 
 **Goal:** Add the final layer of automation, allowing the tool to check for updates automatically based on a user configuration file.
 
-*   **[ ] Chunk 12.1: Configuration File Support**
+*   **[x] Chunk 12.1: Configuration File Support**
     *   **Task:** Implement logic to find and parse the `config.toml` file from the user's config directory (using the `directories` crate).
     *   **Task:** Define a simple config struct and use a TOML parser (like the `toml` crate) to deserialize the file. If the file doesn't exist, use default values (i.e., `auto_update = false`).
 

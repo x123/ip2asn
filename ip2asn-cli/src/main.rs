@@ -1,3 +1,4 @@
+mod config;
 use clap::{Parser, Subcommand};
 use ip2asn::Builder;
 use std::error::Error;
@@ -65,12 +66,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn run_lookup(args: LookupArgs) -> Result<(), Box<dyn Error>> {
+    let _config = config::Config::load();
     let (data_path, is_default_path) = match args.data {
         Some(path) => (path, false),
         None => {
-            let dirs = directories::ProjectDirs::from("io", "github", "x123")
-                .ok_or("Could not determine cache directory")?;
-            let cache_dir = dirs.cache_dir().join("ip2asn");
+            let base_dirs =
+                directories::BaseDirs::new().ok_or("Could not determine cache directory")?;
+            let cache_dir = base_dirs.cache_dir().join("ip2asn");
             (cache_dir.join("data.tsv.gz"), true)
         }
     };
@@ -103,9 +105,8 @@ fn run_lookup(args: LookupArgs) -> Result<(), Box<dyn Error>> {
 }
 
 fn run_update() -> Result<(), Box<dyn Error>> {
-    let dirs = directories::ProjectDirs::from("io", "github", "x123")
-        .ok_or("Could not determine cache directory")?;
-    let cache_dir = dirs.cache_dir().join("ip2asn");
+    let base_dirs = directories::BaseDirs::new().ok_or("Could not determine cache directory")?;
+    let cache_dir = base_dirs.cache_dir().join("ip2asn");
     fs::create_dir_all(&cache_dir)?;
     let data_path = cache_dir.join("data.tsv.gz");
 

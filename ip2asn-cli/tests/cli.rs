@@ -4,7 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 
 fn setup_test_data() -> PathBuf {
-    let dirs = directories::ProjectDirs::from("io", "github", "x123").unwrap();
+    let dirs = directories::BaseDirs::new().unwrap();
     let cache_dir = dirs.cache_dir().join("ip2asn");
     fs::create_dir_all(&cache_dir).unwrap();
     let data_path = cache_dir.join("data.tsv.gz");
