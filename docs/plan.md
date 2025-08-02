@@ -265,6 +265,6 @@ Of course. Here is a detailed implementation plan for Approach 1, formatted as a
         *   A `#[cfg(feature = "serde")]` test that verifies an `AsnInfo` struct can be successfully serialized to JSON and then deserialized back into an identical struct.
     *   **Task:** Ensure all tests pass.
 
-*   **[ ] Chunk 8.3: Update Documentation**
+*   **[x] Chunk 8.3: Update Documentation**
     *   **Task:** Add a new section to `README.md` demonstrating the use of `IpAsnMap::new()` and `lookup_owned()`.
     *   **Task:** Ensure all new public items (`AsnInfo`, `IpAsnMap::new`, `IpAsnMap::lookup_owned`) have comprehensive doc comments.

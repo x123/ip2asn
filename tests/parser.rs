@@ -1,6 +1,6 @@
 //! Integration tests for the line parser.
 
-use ip2asn::parser::{ParsedLine, parse_line};
+use ip2asn::parser::{parse_line, ParsedLine};
 use std::net::{Ipv4Addr, Ipv6Addr};
 
 #[test]
@@ -105,9 +105,7 @@ fn test_parse_line_from_real_data() {
     );
     assert_eq!(
         result2.end_ip,
-        Ipv6Addr::new(
-            0x2803, 0xc280, 0x0002, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff
-        )
+        Ipv6Addr::new(0x2803, 0xc280, 0x0002, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff)
     );
     assert_eq!(result2.asn, 265775);
     assert_eq!(result2.country_code, [b'E', b'C']);

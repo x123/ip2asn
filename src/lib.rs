@@ -55,7 +55,7 @@ pub mod range;
 pub mod types;
 
 use crate::interner::StringInterner;
-use crate::parser::{ParsedLine, parse_line};
+use crate::parser::{parse_line, ParsedLine};
 use crate::range::range_to_cidrs;
 use crate::types::AsnRecord;
 use flate2::read::GzDecoder;
@@ -64,6 +64,7 @@ use ip_network_table::IpNetworkTable;
 use std::error::Error as StdError;
 use std::fmt;
 use std::fs::File;
+use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader};
 use std::net::IpAddr;
 use std::path::Path;
@@ -269,6 +270,15 @@ impl IpAsnMap {
     /// Creates a new, empty `IpAsnMap`.
     ///
     /// This is a convenience method equivalent to `IpAsnMap::default()`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use ip2asn::IpAsnMap;
+    ///
+    /// let map = IpAsnMap::new();
+    /// assert!(map.lookup("1.1.1.1".parse().unwrap()).is_none());
+    /// ```
     pub fn new() -> Self {
         Self::default()
     }
@@ -302,6 +312,26 @@ impl IpAsnMap {
     /// This method is an alternative to `lookup` that returns an owned `AsnInfo`
     /// struct rather than a view. This is useful in async contexts or when the
     /// result needs to be stored or sent across threads.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use ip2asn::{Builder, IpAsnMap};
+    /// # use std::net::IpAddr;
+    /// #
+    /// # fn main() -> Result<(), ip2asn::Error> {
+    /// # let data = "1.0.0.0\t1.0.0.255\t13335\tAU\tCLOUDFLARENET";
+    /// # let map = Builder::new().with_source(data.as_bytes())?.build()?;
+    /// let ip: IpAddr = "1.0.0.1".parse().unwrap();
+    ///
+    /// if let Some(info) = map.lookup_owned(ip) {
+    ///     // The `info` object is owned and can be stored or sent across threads.
+    ///     assert_eq!(info.asn, 13335);
+    ///     println!("Owned info: {}", info);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn lookup_owned(&self, ip: IpAddr) -> Option<AsnInfo> {
         self.lookup(ip).map(AsnInfo::from)
     }
@@ -312,7 +342,30 @@ impl IpAsnMap {
 /// This struct is returned by the `lookup_owned` method and is useful when
 /// the information needs to be stored or moved, as it does not contain any
 /// lifetimes.
-#[derive(Debug, Clone, PartialEq, Eq)]
+///
+/// It implements common traits like `Clone`, `Eq`, `Ord`, and `Hash`, and can
+/// be serialized with `serde` if the `serde` feature is enabled.
+///
+/// # Example
+///
+/// ```
+/// # use ip2asn::{AsnInfo, Builder};
+/// # use ip_network::IpNetwork;
+/// # use std::net::IpAddr;
+/// #
+/// # fn main() -> Result<(), ip2asn::Error> {
+/// # let data = "1.0.0.0\t1.0.0.255\t13335\tAU\tCLOUDFLARENET";
+/// # let map = Builder::new().with_source(data.as_bytes())?.build()?;
+/// let ip: IpAddr = "1.0.0.1".parse().unwrap();
+/// let owned_info = map.lookup_owned(ip).unwrap();
+///
+/// // You can clone it, hash it, sort it, etc.
+/// let cloned_info = owned_info.clone();
+/// assert_eq!(owned_info, cloned_info);
+/// # Ok(())
+/// # }
+/// ```
+#[derive(Debug, Clone, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[non_exhaustive]
 pub struct AsnInfo {
@@ -324,6 +377,69 @@ pub struct AsnInfo {
     pub country_code: String,
     /// The common name of the organization that owns the IP range.
     pub organization: String,
+}
+
+impl PartialEq for AsnInfo {
+    fn eq(&self, other: &Self) -> bool {
+        self.network == other.network
+            && self.asn == other.asn
+            && self.country_code == other.country_code
+            && self.organization == other.organization
+    }
+}
+
+impl PartialOrd for AsnInfo {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for AsnInfo {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.asn
+            .cmp(&other.asn)
+            .then_with(|| self.network.cmp(&other.network))
+            .then_with(|| self.country_code.cmp(&other.country_code))
+            .then_with(|| self.organization.cmp(&other.organization))
+    }
+}
+
+impl Hash for AsnInfo {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.network.hash(state);
+        self.asn.hash(state);
+        self.country_code.hash(state);
+        self.organization.hash(state);
+    }
+}
+
+impl fmt::Display for AsnInfo {
+    /// Formats the `AsnInfo` for display.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use ip2asn::{Builder, IpAsnMap};
+    /// # use std::net::IpAddr;
+    /// #
+    /// # fn main() -> Result<(), ip2asn::Error> {
+    /// # let data = "1.0.0.0\t1.0.0.255\t13335\tAU\tCLOUDFLARENET";
+    /// # let map = Builder::new().with_source(data.as_bytes())?.build()?;
+    /// let ip: IpAddr = "1.0.0.1".parse().unwrap();
+    /// let info = map.lookup_owned(ip).unwrap();
+    ///
+    /// let display_str = info.to_string();
+    /// assert_eq!(display_str, "AS13335 CLOUDFLARENET (AU) in 1.0.0.0/24");
+    /// # Ok(())
+    /// # }
+    /// ```
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "AS{} {} ({}) in {}",
+            self.asn, self.organization, self.country_code, self.network
+        )
+    }
 }
 
 impl<'a> From<AsnInfoView<'a>> for AsnInfo {

@@ -1,8 +1,8 @@
-use ip_network::IpNetwork;
 use ip2asn::{Builder, Error, IpAsnMap, ParseErrorKind, Warning};
+use ip_network::IpNetwork;
 use std::net::Ipv4Addr;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 const TEST_DATA: &str = r#"
 1.0.0.0	1.0.0.255	13335	US	CLOUDFLARENET

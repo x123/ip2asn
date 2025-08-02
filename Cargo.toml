@@ -1,12 +1,14 @@
 [package]
 name = "ip2asn"
 version = "0.1.1"
-edition = "2024"
+edition = "2021"
+authors = ["x123 <x123@users.noreply.github.com>"]
 license = "MIT"
 description = "A high-performance, memory-efficient Rust crate for mapping IP addresses to Autonomous System (AS) information."
 readme = "README.md"
 homepage = "https://github.com/x123/ip2asn"
 repository = "https://github.com/x123/ip2asn"
+documentation = "https://docs.rs/ip2asn"
 keywords = ["ip", "asn", "geoip", "network", "lookup"]
 categories = ["network-programming", "parser-implementations", "data-structures"]
 
