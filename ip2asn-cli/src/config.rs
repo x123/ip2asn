@@ -8,16 +8,22 @@ pub struct Config {
 
 impl Config {
     pub fn load() -> Self {
-        if let Some(base_dirs) = directories::BaseDirs::new() {
-            let config_path = base_dirs.config_dir().join("ip2asn/config.toml");
-            if config_path.exists() {
-                if let Ok(contents) = std::fs::read_to_string(&config_path) {
-                    if let Ok(config) = toml::from_str(&contents) {
-                        return config;
-                    }
+        let config_path = if let Ok(path) = std::env::var("IP2ASN_CONFIG_PATH") {
+            std::path::PathBuf::from(path)
+        } else if let Some(base_dirs) = directories::BaseDirs::new() {
+            base_dirs.config_dir().join("ip2asn/config.toml")
+        } else {
+            return Self { auto_update: false };
+        };
+
+        if config_path.exists() {
+            if let Ok(contents) = std::fs::read_to_string(&config_path) {
+                if let Ok(config) = toml::from_str(&contents) {
+                    return config;
                 }
             }
         }
+
         Self { auto_update: false }
     }
 }

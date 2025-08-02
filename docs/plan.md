@@ -61,7 +61,7 @@ chunk within a phase represents a small, testable unit of work.
     *   **Task:** Implement logic to find and parse the `config.toml` file from the user's config directory (using the `directories` crate).
     *   **Task:** Define a simple config struct and use a TOML parser (like the `toml` crate) to deserialize the file. If the file doesn't exist, use default values (i.e., `auto_update = false`).
 
-*   **[ ] Chunk 12.2: Automatic Update Logic**
+*   **[x] Chunk 12.2: Automatic Update Logic**
     *   **Task:** In the main lookup function, before loading the map from the cache, check if `auto_update` is enabled in the config.
     *   **Task:** If enabled, check the `mtime` (last modified time) of the cached data file. If it's recent (e.g., less than 24 hours old), do nothing.
     *   **Task:** If the file is old, perform an HTTP `HEAD` request to the data URL. Compare `ETag` or `Last-Modified` headers with stored values to see if a new file is available.

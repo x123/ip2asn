@@ -201,6 +201,59 @@ fn main() -> Result<(), ip2asn::Error> {
 
 -----
 
+## `ip2asn-cli`
+
+This workspace also includes `ip2asn-cli`, a command-line tool that uses the `ip2asn` library to perform lookups from your terminal.
+
+### Installation
+
+You can install the CLI directly from this repository using `cargo`:
+
+```sh
+cargo install --path ip2asn-cli
+```
+
+### Usage
+
+The primary command is `lookup`, which takes one or more IP addresses as arguments. If no IPs are provided, it reads them from `stdin`.
+
+```sh
+# Look up a single IP
+$ ip2asn-cli lookup 8.8.8.8
+15169 | 8.8.8.8 | 8.8.8.0/24 | GOOGLE | US
+
+# Look up multiple IPs and get JSON output
+$ ip2asn-cli lookup --json 1.1.1.1 9.9.9.9
+{"ip":"1.1.1.1","found":true,"info":{"network":"1.1.1.0/24","asn":13335,"country_code":"US","organization":"CLOUDFLARENET"}}
+{"ip":"9.9.9.9","found":true,"info":{"network":"9.9.9.0/24","asn":19281,"country_code":"CH","organization":"QUAD9-AS-CH"}}
+
+# Read from stdin
+$ echo "208.67.222.222" | ip2asn-cli lookup
+22822 | 208.67.222.222 | 208.67.222.0/24 | OPENDNS | US
+```
+
+### Automatic Dataset Updates
+
+On the first run, and subsequently whenever the cached data is more than 24 hours old, `ip2asn-cli` will automatically check for and download the latest IP-to-ASN dataset from [iptoasn.com](https://iptoasn.com).
+
+*   **Data is cached at:** `~/.cache/ip2asn/data.tsv.gz`
+*   Progress messages are printed to `stderr`, so they won't interfere with `stdout` parsing.
+*   You can force a download at any time by running `ip2asn-cli update`.
+
+### Configuration
+
+You can configure the tool's behavior by creating a file at `~/.config/ip2asn/config.toml`.
+
+**`config.toml`**
+```toml
+# Set to false to disable the automatic 24-hour update check.
+# The `update` subcommand will still work.
+# Defaults to false.
+auto_update = true
+```
+
+-----
+
 ## License
 
 This project is licensed under the **MIT License**.
