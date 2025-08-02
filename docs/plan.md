@@ -27,7 +27,7 @@ chunk within a phase represents a small, testable unit of work.
 
 **Goal:** Expand the CLI's input/output capabilities to support reading from `stdin` and formatting output as JSON.
 
-*   **[ ] Chunk 10.1: Stdin Input Handling**
+*   **[x] Chunk 10.1: Stdin Input Handling**
     *   **Task:** Modify the argument parsing logic. If no positional IP address arguments are provided, the application should switch to reading IPs line-by-line from `stdin`.
     *   **Task:** Refactor the core lookup loop to handle either the list of arguments or the lines from `stdin` as its input.
     *   **TDD: Update the integration test** to cover piping input to the CLI and asserting the correct output.

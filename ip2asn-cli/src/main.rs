@@ -12,20 +12,40 @@ struct Cli {
     #[arg(short, long, required = true)]
     data: PathBuf,
 
-    /// One or more IP addresses to look up.
-    #[arg(required = true, name = "IPS")]
+    /// One or more IP addresses to look up. If not provided, reads from stdin.
+    #[arg(name = "IPS")]
     ips: Vec<IpAddr>,
 }
 
+use ip2asn::IpAsnMap;
+use std::io::{self, BufRead};
+
 fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
-
-    // Build the map from the specified data file.
     let map = Builder::new().from_path(&cli.data)?.build()?;
 
-    // Process each IP address.
-    for ip in cli.ips {
-        match map.lookup(ip) {
+    if !cli.ips.is_empty() {
+        for ip in cli.ips {
+            perform_lookup(&map, &ip.to_string());
+        }
+    } else {
+        let stdin = io::stdin();
+        for line in stdin.lock().lines() {
+            let ip_str = line?;
+            perform_lookup(&map, &ip_str);
+        }
+    }
+
+    Ok(())
+}
+
+fn perform_lookup(map: &IpAsnMap, ip_str: &str) {
+    let trimmed_ip = ip_str.trim();
+    if trimmed_ip.is_empty() {
+        return;
+    }
+    match trimmed_ip.parse::<IpAddr>() {
+        Ok(ip) => match map.lookup(ip) {
             Some(info) => {
                 println!(
                     "{} | {} | {} | {} | {}",
@@ -35,7 +55,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             None => {
                 println!("{} | Not Found", ip);
             }
+        },
+        Err(_) => {
+            eprintln!("Error: Invalid IP address '{}'", trimmed_ip);
         }
     }
-    Ok(())
 }

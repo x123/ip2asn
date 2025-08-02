@@ -23,3 +23,19 @@ fn test_lookup_not_found() {
         .success()
         .stdout(predicate::str::contains("127.0.0.1 | Not Found"));
 }
+
+#[test]
+fn test_lookup_stdin() {
+    let mut cmd = Command::cargo_bin("ip2asn-cli").unwrap();
+    cmd.arg("--data")
+        .arg("../testdata/testdata-small-ip2asn.tsv.gz");
+    cmd.write_stdin("8.8.8.8\n1.1.1.1\n");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains(
+            "AS15169 | 8.8.8.8 | 8.8.8.0/24 | GOOGLE | US",
+        ))
+        .stdout(predicate::str::contains(
+            "AS13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US",
+        ));
+}
