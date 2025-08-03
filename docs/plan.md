@@ -44,7 +44,7 @@ chunk within a phase represents a small, testable unit of work.
 
 *   **[x] Chunk 11.1: The `update` Subcommand**
     *   **Task:** Add an `update` subcommand to the `clap` definition.
-    *   **Task:** Implement the handler for the `update` command. It should use the `directories` crate to find the user's cache directory and create an `ip2asn` subdirectory.
+    *   **Task:** Implement the handler for the `update` command. It should use the `home` crate to find the user's cache directory (`~/.cache/ip2asn`).
     *   **Task:** Use `reqwest` to download the dataset from the URL specified in the spec.
     *   **Task:** Use `indicatif` to display a progress bar during the download.
     *   **Task:** Save the downloaded file to `{USER_CACHE_DIR}/ip2asn/data.tsv.gz`.
@@ -58,7 +58,7 @@ chunk within a phase represents a small, testable unit of work.
 **Goal:** Add the final layer of automation, allowing the tool to check for updates automatically based on a user configuration file.
 
 *   **[x] Chunk 12.1: Configuration File Support**
-    *   **Task:** Implement logic to find and parse the `config.toml` file from the user's config directory (using the `directories` crate).
+    *   **Task:** Implement logic to find and parse the `config.toml` file from the user's config directory (`~/.config/ip2asn/config.toml`) using the `home` crate.
     *   **Task:** Define a simple config struct and use a TOML parser (like the `toml` crate) to deserialize the file. If the file doesn't exist, use default values (i.e., `auto_update = false`).
 
 *   **[x] Chunk 12.2: Automatic Update Logic**
@@ -76,9 +76,9 @@ chunk within a phase represents a small, testable unit of work.
     *   **TDD: Write failing unit tests for `config.rs`.** These tests will cover loading a valid config, handling a malformed config file, and correctly applying default values when the file is missing.
     *   **TDD: Write failing integration tests for specific error conditions.** Use `wiremock` to simulate network failures (e.g., 500 errors) and assert that the CLI returns the appropriate error messages. Add a test for invalid `stdin` to ensure graceful error handling.
 
-*   **[ ] Chunk 13.2: Code Refactoring & Error Handling Improvements**
+*   **[x] Chunk 13.2: Code Refactoring & Error Handling Improvements**
     *   **Task:** Refactor the `CliError::Update` enum variant in `error.rs` to wrap `reqwest::Error` directly, preserving error context. Update the `From` and `Display` implementations accordingly.
-    *   **Task:** Create a centralized `get_cache_dir()` function in `main.rs` that uses the `directories` crate. Refactor `run_lookup` and `run_update` to use this new function.
+    *   **Task:** Refactor `run_lookup` and `run_update` to use the `home` crate for locating the cache and config directories, removing any redundant path construction logic.
     *   **Task:** Simplify the JSON serialization logic in the `perform_lookup` function to remove redundant code.
     *   **Verification:** All tests from Chunk 13.1 should now pass.
 

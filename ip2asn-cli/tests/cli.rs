@@ -35,16 +35,21 @@ impl TestEnv {
         writeln!(config_file, "auto_update = {}", auto_update).unwrap();
         std::env::set_var("IP2ASN_CONFIG_PATH", config_file.path());
 
-        // Create the cache directory and copy test data into it.
+        // Create the cache directory but do not populate it.
         let cache_dir = home_path.join(".cache/ip2asn");
         fs::create_dir_all(&cache_dir).unwrap();
-        let data_path = cache_dir.join("data.tsv.gz");
-        fs::copy("../testdata/testdata-small-ip2asn.tsv.gz", &data_path).unwrap();
 
         TestEnv {
             _temp_dir: temp_dir,
             _config_file: config_file,
         }
+    }
+
+    fn populate_cache(&self) {
+        let home_path = std::env::var("HOME").unwrap();
+        let cache_dir = PathBuf::from(home_path).join(".cache/ip2asn");
+        let data_path = cache_dir.join("data.tsv.gz");
+        fs::copy("../testdata/testdata-small-ip2asn.tsv.gz", &data_path).unwrap();
     }
 }
 
@@ -58,7 +63,8 @@ impl Drop for TestEnv {
 #[test]
 fn test_lookup_single_ip() {
     let _guard = ENV_MUTEX.lock().unwrap();
-    let _env = TestEnv::new(false);
+    let env = TestEnv::new(false);
+    env.populate_cache();
 
     let mut cmd = Command::cargo_bin("ip2asn").unwrap();
     cmd.arg("1.1.1.1");
@@ -70,7 +76,8 @@ fn test_lookup_single_ip() {
 #[test]
 fn test_lookup_subcommand_still_works() {
     let _guard = ENV_MUTEX.lock().unwrap();
-    let _env = TestEnv::new(false);
+    let env = TestEnv::new(false);
+    env.populate_cache();
 
     let mut cmd = Command::cargo_bin("ip2asn").unwrap();
     cmd.arg("lookup").arg("1.1.1.1");
@@ -82,7 +89,8 @@ fn test_lookup_subcommand_still_works() {
 #[test]
 fn test_lookup_not_found() {
     let _guard = ENV_MUTEX.lock().unwrap();
-    let _env = TestEnv::new(false);
+    let env = TestEnv::new(false);
+    env.populate_cache();
 
     let mut cmd = Command::cargo_bin("ip2asn").unwrap();
     cmd.arg("127.0.0.1");
@@ -94,7 +102,8 @@ fn test_lookup_not_found() {
 #[test]
 fn test_lookup_stdin() {
     let _guard = ENV_MUTEX.lock().unwrap();
-    let _env = TestEnv::new(false);
+    let env = TestEnv::new(false);
+    env.populate_cache();
 
     let mut cmd = Command::cargo_bin("ip2asn").unwrap();
     // No args, should read from stdin
@@ -112,7 +121,8 @@ fn test_lookup_stdin() {
 #[test]
 fn test_lookup_json_output() {
     let _guard = ENV_MUTEX.lock().unwrap();
-    let _env = TestEnv::new(false);
+    let env = TestEnv::new(false);
+    env.populate_cache();
 
     let mut cmd = Command::cargo_bin("ip2asn").unwrap();
     cmd.arg("--json").arg("1.1.1.1").arg("127.0.0.1");
@@ -146,7 +156,8 @@ mod auto_update_tests {
     #[tokio::test]
     async fn test_auto_update_disabled() {
         let _guard = ENV_MUTEX.lock().unwrap();
-        let _env = TestEnv::new(false);
+        let env = TestEnv::new(false);
+        env.populate_cache();
         std::env::set_var("IP2ASN_TESTING", "1");
 
         let mut cmd = Command::cargo_bin("ip2asn").unwrap();
@@ -162,7 +173,8 @@ mod auto_update_tests {
     async fn test_auto_update_recent_file() {
         let _guard = ENV_MUTEX.lock().unwrap();
         let server = MockServer::start().await;
-        let _env = TestEnv::new(true);
+        let env = TestEnv::new(true);
+        env.populate_cache();
         std::env::set_var("IP2ASN_TESTING", "1");
 
         let home_path = std::env::var("HOME").unwrap();
@@ -210,7 +222,8 @@ mod auto_update_tests {
         let _guard = ENV_MUTEX.lock().unwrap();
         let _ = tracing_subscriber::fmt().with_test_writer().try_init();
         let server = MockServer::start().await;
-        let _env = TestEnv::new(true);
+        let env = TestEnv::new(true);
+        env.populate_cache();
         std::env::set_var("IP2ASN_TESTING", "1");
 
         let home_path = std::env::var("HOME").unwrap();
@@ -283,8 +296,6 @@ mod command_tests {
 
         let home_path = std::env::var("HOME").unwrap();
         let data_path = PathBuf::from(home_path).join(".cache/ip2asn/data.tsv.gz");
-        // Remove the pre-populated data file to ensure the update command downloads it.
-        fs::remove_file(&data_path).unwrap();
         assert!(!data_path.exists());
 
         // Mock the GET response for the download
@@ -345,7 +356,7 @@ mod command_tests {
         cmd.arg("update");
 
         cmd.assert().failure().stderr(predicate::str::contains(
-            "Error: Update error: error sending request for URL (https://",
+            "Error: Update error: HTTP status server error (500 Internal Server Error)",
         ));
 
         std::env::remove_var("IP2ASN_DATA_URL");
@@ -355,7 +366,8 @@ mod command_tests {
     #[test]
     fn test_lookup_invalid_stdin() {
         let _guard = ENV_MUTEX.lock().unwrap();
-        let _env = TestEnv::new(false);
+        let env = TestEnv::new(false);
+        env.populate_cache();
 
         let mut cmd = Command::cargo_bin("ip2asn").unwrap();
         cmd.write_stdin("8.8.8.8\nnot-an-ip\n1.1.1.1\n");

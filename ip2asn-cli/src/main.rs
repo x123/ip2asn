@@ -231,9 +231,12 @@ fn check_for_updates(config: &config::Config, cache_path: &PathBuf) -> Result<()
     let modified_time = metadata.modified()?;
     debug!(?modified_time, "Cache file modified time");
     let now = SystemTime::now();
-    let age = now
-        .duration_since(modified_time)
-        .map_err(|e| CliError::Update(format!("System time error: {}", e)))?;
+    let age = now.duration_since(modified_time).map_err(|e| {
+        CliError::Io(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("System time error: {}", e),
+        ))
+    })?;
     debug!(?age, "Cache file age");
     if age < Duration::from_secs(24 * 60 * 60) {
         debug!("Cache file is recent, skipping update check");
@@ -247,9 +250,12 @@ fn check_for_updates(config: &config::Config, cache_path: &PathBuf) -> Result<()
     response.error_for_status_ref()?;
 
     if let Some(last_modified) = response.headers().get(reqwest::header::LAST_MODIFIED) {
-        let last_modified_str = last_modified
-            .to_str()
-            .map_err(|e| CliError::Update(format!("Invalid Last-Modified header: {}", e)))?;
+        let last_modified_str = last_modified.to_str().map_err(|e| {
+            CliError::Io(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Invalid Last-Modified header: {}", e),
+            ))
+        })?;
         debug!(%last_modified_str, "Remote Last-Modified header");
         let remote_mtime = httpdate::parse_http_date(last_modified_str)?;
         debug!(?remote_mtime, "Parsed remote mtime");
@@ -282,9 +288,12 @@ fn run_update() -> Result<(), CliError> {
 
     let mut response = reqwest::blocking::get(get_data_url())?;
     response.error_for_status_ref()?;
-    let total_size = response
-        .content_length()
-        .ok_or_else(|| CliError::Update("Failed to get content length".to_string()))?;
+    let total_size = response.content_length().ok_or_else(|| {
+        CliError::Io(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "Failed to get content length",
+        ))
+    })?;
 
     if std::env::var("IP2ASN_TESTING").is_ok() {
         let mut file = fs::File::create(&data_path)?;
@@ -294,7 +303,10 @@ fn run_update() -> Result<(), CliError> {
         pb.set_style(
             indicatif::ProgressStyle::default_bar()
                 .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")
-                .map_err(|e| CliError::Update(format!("Indicatif error: {}", e)))?
+                .map_err(|e| CliError::Io(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Indicatif error: {}", e),
+                )))?
                 .progress_chars("#>-"),
         );
 
@@ -317,51 +329,36 @@ fn perform_lookup(map: &IpAsnMap, ip_str: &str, json: bool) -> Result<(), CliErr
     if trimmed_ip.is_empty() {
         return Ok(());
     }
-    match trimmed_ip.parse::<IpAddr>() {
-        Ok(ip) => {
-            if json {
-                let result = map.lookup_owned(ip);
-                let output = JsonOutput {
-                    ip: ip.to_string(),
-                    found: result.is_some(),
-                    info: result,
-                };
-                println!(
-                    "{}",
-                    serde_json::to_string(&output).map_err(|e| CliError::InvalidInput(format!(
-                        "JSON serialization error: {}",
-                        e
-                    )))?
-                );
-            } else {
-                match map.lookup(ip) {
-                    Some(info) => {
-                        println!(
-                            "{} | {} | {} | {} | {}",
-                            info.asn, ip, info.network, info.organization, info.country_code
-                        );
-                    }
-                    None => {
-                        println!("{} | Not Found", ip);
-                    }
+
+    if json {
+        let (ip_str, result) = match trimmed_ip.parse::<IpAddr>() {
+            Ok(ip) => (ip.to_string(), map.lookup_owned(ip)),
+            Err(_) => (trimmed_ip.to_string(), None),
+        };
+        let output = JsonOutput {
+            ip: ip_str,
+            found: result.is_some(),
+            info: result,
+        };
+        println!(
+            "{}",
+            serde_json::to_string(&output)
+                .map_err(|e| CliError::InvalidInput(format!("JSON serialization error: {}", e)))?
+        );
+    } else {
+        match trimmed_ip.parse::<IpAddr>() {
+            Ok(ip) => match map.lookup(ip) {
+                Some(info) => {
+                    println!(
+                        "{} | {} | {} | {} | {}",
+                        info.asn, ip, info.network, info.organization, info.country_code
+                    );
                 }
-            }
-        }
-        Err(_) => {
-            if json {
-                let output = JsonOutput {
-                    ip: trimmed_ip.to_string(),
-                    found: false,
-                    info: None,
-                };
-                println!(
-                    "{}",
-                    serde_json::to_string(&output).map_err(|e| CliError::InvalidInput(format!(
-                        "JSON serialization error: {}",
-                        e
-                    )))?
-                );
-            } else {
+                None => {
+                    println!("{} | Not Found", ip);
+                }
+            },
+            Err(_) => {
                 eprintln!("Error: Invalid IP address '{}'", trimmed_ip);
             }
         }

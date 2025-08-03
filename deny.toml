@@ -17,6 +17,13 @@ multiple-versions = "allow"
 # Certain crates/versions are not allowed.
 wildcards = "warn"
 
+# Ban the `directories` crate in favor of `home`.
+# we use home, not directories
+[[bans.deny]]
+name = "directories"
+version = "*"
+reason = "Use the `home` crate for consistency with ~/.cache and ~/.config paths"
+
 [advisories]
 version = 2
 # The database to use for advisories.

@@ -51,7 +51,7 @@ mod tests {
     use lazy_static::lazy_static;
     use std::io::Write;
     use std::sync::Mutex;
-    use tempfile::{tempdir, NamedTempFile};
+    use tempfile::NamedTempFile;
 
     lazy_static! {
         static ref CONFIG_TEST_MUTEX: Mutex<()> = Mutex::new(());
@@ -101,14 +101,11 @@ mod tests {
         let _guard = CONFIG_TEST_MUTEX.lock().unwrap();
         std::env::remove_var("IP2ASN_CONFIG_PATH");
 
-        // Create a temporary, empty home directory to ensure no config is found.
-        let temp_dir = tempdir().unwrap();
+        let temp_dir = tempfile::tempdir().unwrap();
         std::env::set_var("HOME", temp_dir.path());
-
         let config = Config::load().unwrap();
         // Should return default config
         assert!(!config.auto_update);
-
         std::env::remove_var("HOME");
     }
 }

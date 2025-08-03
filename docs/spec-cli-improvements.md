@@ -13,9 +13,8 @@ The goal of this initiative is to enhance the robustness, maintainability, and t
 *   **Problem:** The logic for determining the cache directory path is duplicated in [`run_lookup`](ip2asn-cli/src/main.rs:173) and [`run_update`](ip2asn-cli/src/main.rs:276).
 *   **Requirement:**
     1.  Create a new private function, `get_cache_dir() -> Result<PathBuf, CliError>`, within [`main.rs`](ip2asn-cli/src/main.rs).
-    2.  This function will use the `directories` crate to locate the user's cache directory, as specified in the original spec ([`docs/spec-ip2asn-cli.md`](docs/spec-ip2asn-cli.md)), and append the `ip2asn` subdirectory.
+    2.  This function will use the `home` crate to locate the user's home directory and construct the path to the cache directory (`~/.cache/ip2asn`).
     3.  Both `run_lookup` and `run_update` must be refactored to use this new function.
-    4.  The `home` crate dependency can be removed in favor of `directories`.
 
 ### 2.2. Simplify JSON Output Logic
 

@@ -5,7 +5,7 @@ pub enum CliError {
     Io(std::io::Error),
     Config(String),
     Lookup(ip2asn::Error),
-    Update(String),
+    Update(reqwest::Error),
     NotFound(String),
     InvalidInput(String),
 }
@@ -28,6 +28,7 @@ impl std::error::Error for CliError {
         match self {
             CliError::Io(e) => Some(e),
             CliError::Lookup(e) => Some(e),
+            CliError::Update(e) => Some(e),
             _ => None,
         }
     }
@@ -47,7 +48,7 @@ impl From<ip2asn::Error> for CliError {
 
 impl From<reqwest::Error> for CliError {
     fn from(err: reqwest::Error) -> Self {
-        CliError::Update(err.to_string())
+        CliError::Update(err)
     }
 }
 
@@ -59,6 +60,11 @@ impl From<toml::de::Error> for CliError {
 
 impl From<httpdate::Error> for CliError {
     fn from(err: httpdate::Error) -> Self {
-        CliError::Update(format!("Failed to parse HTTP date: {}", err))
+        // Wrap httpdate::Error in a generic IO error, as it's a parsing failure
+        // during the update process. This avoids adding another error variant.
+        CliError::Io(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("Failed to parse HTTP date: {}", err),
+        ))
     }
 }
