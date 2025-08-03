@@ -27,7 +27,7 @@ serde = { version = "1.0", features = ["derive"], optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-wiremock = "0.6.0"
+mockito = "1.4.0"
 criterion = { version = "0.6.0", features = ["html_reports"] }
 serde_json = "1.0"
 rstest = "0.21.0"

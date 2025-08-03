@@ -184,31 +184,26 @@ fn test_builder_warning_callback() {
 #[cfg(feature = "fetch")]
 mod fetch_tests {
     use super::*;
+    use mockito;
     use std::io::Read;
-    use wiremock::matchers::{method, path};
-    use wiremock::{Mock, MockServer, ResponseTemplate};
 
     #[tokio::test]
     async fn test_builder_from_url() {
-        // Start a mock server.
-        let server = MockServer::start().await;
+        let mut server = mockito::Server::new_async().await;
 
-        // Read the gzipped test data.
         let mut file = std::fs::File::open("testdata/testdata-small-ip2asn.tsv.gz").unwrap();
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer).unwrap();
 
-        // Set up the mock response.
-        Mock::given(method("GET"))
-            .and(path("/ip2asn.tsv.gz"))
-            .respond_with(ResponseTemplate::new(200).set_body_bytes(buffer))
-            .mount(&server)
+        let mock = server
+            .mock("GET", "/ip2asn.tsv.gz")
+            .with_status(200)
+            .with_body(&buffer)
+            .create_async()
             .await;
 
-        // Construct the URL.
-        let url = format!("{}/ip2asn.tsv.gz", server.uri());
+        let url = format!("{}/ip2asn.tsv.gz", server.url());
 
-        // Build the map from the URL.
         let url_clone = url.clone();
         let map = tokio::task::spawn_blocking(move || {
             Builder::new()
@@ -220,7 +215,6 @@ mod fetch_tests {
         .await
         .unwrap();
 
-        // Perform lookups to verify the data was loaded correctly.
         let view = map.lookup("154.16.226.100".parse().unwrap()).unwrap();
         assert_eq!(view.asn, 61317);
         assert_eq!(view.organization, "ASDETUK www.heficed.com");
@@ -228,19 +222,23 @@ mod fetch_tests {
         let view_ipv6 = map.lookup("2001:67c:2309::1".parse().unwrap()).unwrap();
         assert_eq!(view_ipv6.asn, 0);
         assert_eq!(view_ipv6.organization, "Not routed");
+
+        mock.assert_async().await;
     }
 
     #[tokio::test]
     async fn test_builder_from_url_not_gzipped() {
-        let server = MockServer::start().await;
+        let mut server = mockito::Server::new_async().await;
         let test_data = "1.0.0.0\t1.0.0.255\t13335\tUS\tCLOUDFLARENET";
-        Mock::given(method("GET"))
-            .and(path("/ip2asn.tsv"))
-            .respond_with(ResponseTemplate::new(200).set_body_string(test_data))
-            .mount(&server)
+
+        let mock = server
+            .mock("GET", "/ip2asn.tsv")
+            .with_status(200)
+            .with_body(test_data)
+            .create_async()
             .await;
 
-        let url = format!("{}/ip2asn.tsv", server.uri());
+        let url = format!("{}/ip2asn.tsv", server.url());
         let url_clone = url.clone();
         let map = tokio::task::spawn_blocking(move || {
             Builder::new()
@@ -255,18 +253,20 @@ mod fetch_tests {
         let view = map.lookup("1.0.0.1".parse().unwrap()).unwrap();
         assert_eq!(view.asn, 13335);
         assert_eq!(view.organization, "CLOUDFLARENET");
+
+        mock.assert_async().await;
     }
 
     #[tokio::test]
     async fn test_builder_from_url_http_error() {
-        let server = MockServer::start().await;
-        Mock::given(method("GET"))
-            .and(path("/not-found"))
-            .respond_with(ResponseTemplate::new(404))
-            .mount(&server)
+        let mut server = mockito::Server::new_async().await;
+        let mock = server
+            .mock("GET", "/not-found")
+            .with_status(404)
+            .create_async()
             .await;
 
-        let url = format!("{}/not-found", server.uri());
+        let url = format!("{}/not-found", server.url());
         let url_clone = url.clone();
         let result = tokio::task::spawn_blocking(move || Builder::new().from_url(&url_clone)).await;
 
@@ -279,6 +279,7 @@ mod fetch_tests {
             }
             _ => panic!("Expected an HTTP error"),
         }
+        mock.assert_async().await;
     }
 }
 

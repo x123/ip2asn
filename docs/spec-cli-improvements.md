@@ -44,7 +44,7 @@ The goal of this initiative is to enhance the robustness, maintainability, and t
 The following gaps in test coverage must be addressed:
 
 1.  **`update` Subcommand:**
-    *   **Plan:** Add a new integration test that directly invokes `ip2asn-cli update`. This test should use `wiremock` to mock the server response and assert that the data file is successfully downloaded and created in the temporary cache directory.
+    *   **Plan:** Add a new integration test that directly invokes `ip2asn-cli update`. This test should use `mockito` to mock the server response and assert that the data file is successfully downloaded and created in the temporary cache directory.
 
 2.  **Configuration Loading (`config.rs`):**
     *   **Plan:** Create a new unit test module within [`config.rs`](ip2asn-cli/src/config.rs).
@@ -56,7 +56,7 @@ The following gaps in test coverage must be addressed:
 3.  **Error Condition Tests:**
     *   **Plan:** Add new integration tests to simulate and verify the following failure scenarios:
         *   **Cache Directory Creation Failure:** Mock a scenario where creating the cache directory fails due to permissions issues (this may require more advanced test setup).
-        *   **Network Errors:** Use `wiremock` to simulate network failures (e.g., 500 server error, connection timeout) for both `HEAD` and `GET` requests and assert that the correct `CliError::Update` is returned.
+        *   **Network Errors:** Use `mockito` to simulate network failures (e.g., 500 server error, connection timeout) for both `HEAD` and `GET` requests and assert that the correct `CliError::Update` is returned.
         *   **Invalid `stdin`:** Add a test where non-IP strings are piped to `stdin` and assert that they are gracefully handled (reported on `stderr`) without crashing the program.
 
 ## 5. `justfile` Enhancements

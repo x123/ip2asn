@@ -21,7 +21,7 @@ Phases we have already completed.
 
 **4. Phase 4: I/O, Features, and Ergonomics**
 *   **[x] Chunk 4.1: File I/O & Gzip Decompression:** Added support for building the map from local files, with transparent gzip decompression.
-*   **[x] Chunk 4.2: `fetch` Feature & Network I/O:** Implemented the optional `fetch` feature to build the map directly from a URL, using `reqwest` and `wiremock` for testing.
+*   **[x] Chunk 4.2: `fetch` Feature & Network I/O:** Implemented the optional `fetch` feature to build the map directly from a URL, using `reqwest` and `mockito` for testing.
 
 **5. Phase 5: Final Polish & Release Prep**
 *   **[x] Chunk 5.1: Harden Error Handling & Final Features:** Implemented strict mode and a warning callback system for handling parse errors gracefully.
