@@ -2,7 +2,7 @@
 description: "Create a changelog entry"
 ---
 
-You are going to create a changelog entry in CHANGELOG.md which follows the best practices from https://keepachangelog.com/en/1.1.0/
+You are going to create a changelog entry in `CHANGELOG.md` (for the `ip2asn` crate), and/or `ip2asn-cli/CHANGELOG.md` (for changes to the `ip2asn-cli` crate) which follows the best practices from https://keepachangelog.com/en/1.1.0/
 
 Here is the content from keepachangelog:
 ```
