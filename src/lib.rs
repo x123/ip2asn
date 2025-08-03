@@ -464,9 +464,9 @@ pub struct Builder<'a> {
 impl<'a> fmt::Debug for Builder<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Builder")
-            .field("source", &self.source.as_ref().map(|_| "Some(...)"))
+            .field("has_source", &self.source.is_some())
             .field("strict", &self.strict)
-            .field("on_warning", &self.on_warning.as_ref().map(|_| "Some(...)"))
+            .field("has_on_warning", &self.on_warning.is_some())
             .finish()
     }
 }
@@ -814,5 +814,61 @@ mod tests {
             organization: "TEST-NET".to_string(),
         };
         assert_eq!(info.to_string(), "AS64496 TEST-NET (ZZ) in 192.0.2.0/24");
+    }
+
+    #[test]
+    fn test_builder_debug_impl() {
+        let builder = Builder::new();
+        let debug_str = format!("{builder:?}");
+        assert!(debug_str.contains("Builder"));
+        assert!(debug_str.contains("has_source: false"));
+        assert!(debug_str.contains("strict: false"));
+        assert!(debug_str.contains("has_on_warning: false"));
+
+        let builder_with_source = builder.with_source("".as_bytes()).unwrap();
+        let debug_str_with_source = format!("{builder_with_source:?}");
+        assert!(debug_str_with_source.contains("has_source: true"));
+    }
+
+    #[test]
+    fn test_builder_build_no_source() {
+        let result = Builder::new().build();
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, Error::Io(_)));
+        if let Error::Io(io_err) = err {
+            assert_eq!(io_err.kind(), io::ErrorKind::NotFound);
+            assert_eq!(io_err.to_string(), "No data source provided");
+        }
+    }
+
+    #[test]
+    fn test_builder_warning_handling() {
+        use std::sync::{Arc, Mutex};
+
+        // Test IpFamilyMismatch with a warning handler
+        let data = "1.0.0.0\t::1\t123\tUS\tTEST";
+        let warnings = Arc::new(Mutex::new(Vec::new()));
+        let warnings_clone = warnings.clone();
+
+        let builder = Builder::new()
+            .with_source(data.as_bytes())
+            .unwrap()
+            .on_warning(move |w| {
+                warnings_clone.lock().unwrap().push(format!("{w:?}"));
+            });
+
+        let map = builder.build().unwrap();
+        assert!(map.lookup("1.1.1.1".parse::<IpAddr>().unwrap()).is_none()); // Should be empty
+        let warnings_guard = warnings.lock().unwrap();
+        assert_eq!(warnings_guard.len(), 1);
+        assert!(warnings_guard[0].contains("IpFamilyMismatch"));
+
+        // Test a parse error in non-strict mode with no warning handler.
+        // It should just be skipped.
+        let data = "invalid line";
+        let builder = Builder::new().with_source(data.as_bytes()).unwrap();
+        let map = builder.build().unwrap();
+        assert!(map.lookup("1.1.1.1".parse::<IpAddr>().unwrap()).is_none()); // Should be empty
     }
 }

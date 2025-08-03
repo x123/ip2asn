@@ -130,7 +130,7 @@ chunk within a phase represents a small, testable unit of work.
     *   **TDD:** Write unit tests for `AsnInfo` to verify `Ord` and `Hash` implementations.
     *   **TDD:** Write a unit test for the `fmt::Display` implementation of `AsnInfo`.
 
-*   **[ ] Chunk 14.6: Core Library Builder Logic Tests**
+*   **[x] Chunk 14.6: Core Library Builder Logic Tests**
     *   **File:** `src/lib.rs`
     *   **TDD:** Write a unit test for the `fmt::Debug` implementation of the `Builder`.
     *   **TDD:** Write a test calling `build()` on a `Builder` with no data source, asserting an `Error::Io` is returned.
