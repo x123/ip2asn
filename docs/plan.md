@@ -66,3 +66,23 @@ chunk within a phase represents a small, testable unit of work.
     *   **Task:** If enabled, check the `mtime` (last modified time) of the cached data file. If it's recent (e.g., less than 24 hours old), do nothing.
     *   **Task:** If the file is old, perform an HTTP `HEAD` request to the data URL. Compare `ETag` or `Last-Modified` headers with stored values to see if a new file is available.
     *   **Task:** If the remote file is newer, trigger the same download logic from the `update` subcommand to refresh the cache before proceeding with the lookup.
+
+### **Phase 13: Test-Driven Refactoring & Hardening**
+
+**Goal:** Enhance the robustness, maintainability, and testability of the `ip2asn-cli` tool by implementing a comprehensive test suite first, followed by targeted code refactoring and tooling improvements.
+
+*   **[ ] Chunk 13.1: Expand Test Coverage (Write Failing Tests)**
+    *   **TDD: Write a failing integration test for the `update` subcommand.** This test will directly invoke `ip2asn-cli update`, use `wiremock` to mock the server response, and assert that the dataset is downloaded to the correct cache location.
+    *   **TDD: Write failing unit tests for `config.rs`.** These tests will cover loading a valid config, handling a malformed config file, and correctly applying default values when the file is missing.
+    *   **TDD: Write failing integration tests for specific error conditions.** Use `wiremock` to simulate network failures (e.g., 500 errors) and assert that the CLI returns the appropriate error messages. Add a test for invalid `stdin` to ensure graceful error handling.
+
+*   **[ ] Chunk 13.2: Code Refactoring & Error Handling Improvements**
+    *   **Task:** Refactor the `CliError::Update` enum variant in `error.rs` to wrap `reqwest::Error` directly, preserving error context. Update the `From` and `Display` implementations accordingly.
+    *   **Task:** Create a centralized `get_cache_dir()` function in `main.rs` that uses the `directories` crate. Refactor `run_lookup` and `run_update` to use this new function.
+    *   **Task:** Simplify the JSON serialization logic in the `perform_lookup` function to remove redundant code.
+    *   **Verification:** All tests from Chunk 13.1 should now pass.
+
+*   **[ ] Chunk 13.3: Test Suite & Tooling Enhancements**
+    *   **Task:** Refactor the test setup in `tests/cli.rs` to abstract the boilerplate `ENV_MUTEX` and `TestEnv` instantiation into a helper function or macro.
+    *   **Task:** Add a new `coverage` recipe to the `justfile` that uses `cargo-llvm-cov` to generate an LCOV report.
+    *   **Task:** Add a `coverage-html` recipe to the `justfile` to generate a user-friendly HTML report from the LCOV data.
