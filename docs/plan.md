@@ -86,3 +86,55 @@ chunk within a phase represents a small, testable unit of work.
     *   **Task:** Refactor the test setup in `tests/cli.rs` to use `rstest` fixtures, abstracting away the boilerplate `ENV_MUTEX` and `TestEnv` instantiation.
     *   **Task:** Add a new `coverage` recipe to the `justfile` that uses `cargo-llvm-cov` to generate an LCOV report.
     *   **Task:** Add a `coverage-html` recipe to the `justfile` to generate a user-friendly HTML report from the LCOV data.
+
+### **Phase 14: Comprehensive Test Coverage**
+
+**Goal:** Systematically improve test coverage for both the `ip2asn-cli` and `ip2asn` crates by implementing the test cases outlined in `docs/spec-test-coverage.md`. This will be done file-by-file to ensure methodical progress and maintain a working state at each step.
+
+*   **[ ] Chunk 14.1: `ip2asn-cli` Error Handling Tests**
+    *   **File:** `ip2asn-cli/src/error.rs`
+    *   **TDD:** Write unit tests for the `fmt::Display` implementation of `CliError`, covering each variant.
+    *   **TDD:** Write unit tests for the `std::error::Error` implementation of `CliError`, verifying that `source()` returns the correct underlying error for wrapped variants.
+    *   **TDD:** Write unit tests for each `From` trait implementation, ensuring correct conversion from source errors to `CliError` variants.
+
+*   **[ ] Chunk 14.2: `ip2asn-cli` Configuration Tests**
+    *   **File:** `ip2asn-cli/src/config.rs`
+    *   **TDD:** Write a test to verify that `Config::load` correctly uses the `IP2ASN_CONFIG_PATH` environment variable.
+    *   **TDD:** Write a test to ensure `Config::load` returns a default `Config` when no file or environment variable is present.
+    *   **TDD:** Write a test that asserts `Config::load` returns a `CliError::Config` when attempting to load a non-existent configuration file.
+
+*   **[ ] Chunk 14.3: `ip2asn-cli` Main Logic Tests**
+    *   **File:** `ip2asn-cli/src/main.rs`
+    *   **TDD:** Write an integration test for `run_lookup` where the home directory cannot be found, asserting a `CliError::NotFound` error.
+    *   **TDD:** Write an integration test for `run_lookup` where the dataset file is missing, asserting a `CliError::NotFound` error.
+    *   **TDD:** Write integration tests for `check_for_updates` covering:
+        *   Forcing an update when the cache file is missing.
+        *   Skipping a remote check when the cache is recent.
+        *   Handling an invalid `Last-Modified` header from a mocked server.
+        *   Gracefully handling a missing `Last-Modified` header.
+    *   **TDD:** Write integration tests for `run_update` covering:
+        *   Asserting `CliError::NotFound` when the home directory cannot be found.
+        *   Simulating a failure to get `content-length` from a mocked server.
+    *   **TDD:** Write integration tests for `perform_lookup` covering:
+        *   An empty string as input, asserting `Ok(())`.
+        *   An invalid IP address, asserting correctly formatted JSON error output.
+
+*   **[ ] Chunk 14.4: Core Library Error & Warning Tests**
+    *   **File:** `src/lib.rs`
+    *   **TDD:** Write unit tests for `Error::source` for each variant that wraps another error.
+    *   **TDD:** Write unit tests for the `fmt::Display` implementations of `Error`, `Warning`, and `ParseErrorKind`, covering all variants.
+
+*   **[ ] Chunk 14.5: Core Library Data Structure Tests**
+    *   **File:** `src/lib.rs`
+    *   **TDD:** Write a unit test for `IpAsnMap::builder()` to ensure it returns a new `Builder`.
+    *   **TDD:** Write unit tests for `AsnInfo` to verify `Ord` and `Hash` implementations.
+    *   **TDD:** Write a unit test for the `fmt::Display` implementation of `AsnInfo`.
+
+*   **[ ] Chunk 14.6: Core Library Builder Logic Tests**
+    *   **File:** `src/lib.rs`
+    *   **TDD:** Write a unit test for the `fmt::Debug` implementation of the `Builder`.
+    *   **TDD:** Write a test calling `build()` on a `Builder` with no data source, asserting an `Error::Io` is returned.
+    *   **TDD:** Write tests for `build()` warning handling:
+        *   Triggering `IpFamilyMismatch` with a warning handler.
+        *   Triggering a parse error in non-strict mode without a warning handler.
+
