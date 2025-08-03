@@ -753,4 +753,66 @@ mod tests {
         };
         assert_eq!(err.to_string(), "invalid country code: USA");
     }
+
+    #[test]
+    fn test_ip_asn_map_builder() {
+        let builder = IpAsnMap::builder();
+        // A simple assertion to ensure it returns a Builder.
+        // We can check a default value.
+        assert!(!builder.strict);
+    }
+
+    #[test]
+    fn test_asn_info_ord_and_hash() {
+        use std::collections::HashSet;
+
+        let info1 = AsnInfo {
+            network: "1.0.0.0/24".parse().unwrap(),
+            asn: 13335,
+            country_code: "AU".to_string(),
+            organization: "CLOUDFLARENET".to_string(),
+        };
+        let info2 = AsnInfo {
+            network: "1.0.0.0/24".parse().unwrap(),
+            asn: 13335,
+            country_code: "AU".to_string(),
+            organization: "CLOUDFLARENET".to_string(),
+        };
+        let info3 = AsnInfo {
+            network: "8.8.8.0/24".parse().unwrap(),
+            asn: 15169,
+            country_code: "US".to_string(),
+            organization: "GOOGLE".to_string(),
+        };
+        let info4 = AsnInfo {
+            network: "1.0.0.0/24".parse().unwrap(),
+            asn: 13336, // Different ASN
+            country_code: "AU".to_string(),
+            organization: "CLOUDFLARENET".to_string(),
+        };
+
+        // Test Ord
+        assert_eq!(info1.cmp(&info2), std::cmp::Ordering::Equal);
+        assert_eq!(info1.cmp(&info3), std::cmp::Ordering::Less);
+        assert_eq!(info3.cmp(&info1), std::cmp::Ordering::Greater);
+        assert_eq!(info1.cmp(&info4), std::cmp::Ordering::Less);
+
+        // Test Hash
+        let mut set = HashSet::new();
+        assert!(set.insert(info1.clone()));
+        assert!(!set.insert(info2.clone())); // Should not insert, as it's a duplicate
+        assert!(set.insert(info3.clone()));
+        assert_eq!(set.len(), 2);
+    }
+
+    #[test]
+    fn test_asn_info_display() {
+        let info = AsnInfo {
+            network: "192.0.2.0/24".parse().unwrap(),
+            asn: 64496,
+            country_code: "ZZ".to_string(),
+            organization: "TEST-NET".to_string(),
+        };
+        assert_eq!(info.to_string(), "AS64496 TEST-NET (ZZ) in 192.0.2.0/24");
+    }
 }

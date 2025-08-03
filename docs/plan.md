@@ -124,7 +124,7 @@ chunk within a phase represents a small, testable unit of work.
     *   **TDD:** Write unit tests for `Error::source` for each variant that wraps another error.
     *   **TDD:** Write unit tests for the `fmt::Display` implementations of `Error`, `Warning`, and `ParseErrorKind`, covering all variants.
 
-*   **[ ] Chunk 14.5: Core Library Data Structure Tests**
+*   **[x] Chunk 14.5: Core Library Data Structure Tests**
     *   **File:** `src/lib.rs`
     *   **TDD:** Write a unit test for `IpAsnMap::builder()` to ensure it returns a new `Builder`.
     *   **TDD:** Write unit tests for `AsnInfo` to verify `Ord` and `Hash` implementations.
