@@ -60,6 +60,10 @@ All tests must be robust, deterministic, and maintainable.
       * **Tool:** Use the `criterion` crate for all performance benchmarks.
       * **Data:** Benchmarks should run against a realistic, sizable dataset stored within the repository.
 
+  * **Test Concurrency & State Management:**
+      * **Isolate Integration Tests:** Integration tests for the CLI binary MUST NOT modify the shared process environment using `std::env::set_var`. Instead, pass environment variables directly to the subprocess using `assert_cmd::Command::env()`. This ensures tests are parallel-safe.
+      * **Serialize Unit Tests:** For unit tests that MUST modify the process environment (e.g., testing configuration logic that reads `HOME` or other variables), use the `serial_test` crate. Annotate the test function with `#[serial]` to force it to run sequentially, preventing it from interfering with other tests.
+
 -----
 
 ## **4. Dependencies & Tooling**

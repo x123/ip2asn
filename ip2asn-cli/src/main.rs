@@ -119,7 +119,7 @@ struct LookupArgs {
     /// If no IPs are provided as arguments, the command will read them from
     /// standard input, one per line.
     #[arg(name = "IPS")]
-    ips: Vec<IpAddr>,
+    ips: Vec<String>,
 
     /// Formats the output as JSON.
     ///
@@ -213,8 +213,8 @@ fn run_lookup(
     let map = Builder::new().from_path(&data_path)?.build()?;
 
     if !args.ips.is_empty() {
-        for ip in &args.ips {
-            perform_lookup(&map, &ip.to_string(), args.json)?;
+        for ip_str in &args.ips {
+            perform_lookup(&map, ip_str, args.json)?;
         }
     } else {
         let stdin = io::stdin();
@@ -312,6 +312,7 @@ fn run_update(cache_dir_path: Option<&std::path::Path>) -> Result<(), CliError> 
 
     let mut response = reqwest::blocking::get(get_data_url())?;
     response.error_for_status_ref()?;
+
     let total_size = response.content_length().ok_or_else(|| {
         CliError::Io(std::io::Error::new(
             std::io::ErrorKind::Other,
@@ -319,8 +320,9 @@ fn run_update(cache_dir_path: Option<&std::path::Path>) -> Result<(), CliError> 
         ))
     })?;
 
+    let mut file = fs::File::create(&data_path)?;
+
     if std::env::var("IP2ASN_TESTING").is_ok() {
-        let mut file = fs::File::create(&data_path)?;
         io::copy(&mut response, &mut file)?;
     } else {
         let pb = indicatif::ProgressBar::new(total_size);
@@ -333,11 +335,8 @@ fn run_update(cache_dir_path: Option<&std::path::Path>) -> Result<(), CliError> 
                 )))?
                 .progress_chars("#>-"),
         );
-
-        let mut file = fs::File::create(&data_path)?;
         let mut reader = pb.wrap_read(response);
         io::copy(&mut reader, &mut file)?;
-
         pb.finish_with_message("Download complete");
     }
     Ok(())

@@ -38,3 +38,4 @@ flate2 = "1.0"
 httpdate = "1.0"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 rstest = "0.21"
+serial_test = "3.0.0"

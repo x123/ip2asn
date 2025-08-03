@@ -1,5 +1,25 @@
 # Journal
 
+## 2025-08-03
+
+### Test Concurrency Failures and Solutions
+
+While implementing comprehensive test coverage, a significant regression occurred where the test suite would pass when run with `--test-threads=1` but fail when run in parallel. This indicated state leakage between tests.
+
+**Challenges & Solutions:**
+
+*   **Problem 1: Integration Test State Leakage (`tests/cli.rs`)**
+    *   **Symptom:** `auto_update_tests::test_auto_update_skips_check_for_recent_cache` failed because the auto-update check was being triggered when it shouldn't have been.
+    *   **Root Cause:** Tests were using `std::env::set_var` to configure behavior (e.g., `IP2ASN_TESTING`, `IP2ASN_DATA_URL`). This modifies the environment for the *entire* test runner process, causing race conditions where one test's environment bleeds into another's.
+    *   **Solution:** Refactored all integration tests to stop using `std::env::set_var`. Instead, environment variables are now passed directly to the child process via `assert_cmd::Command::env()`. This properly isolates the environment for each test run, making them parallel-safe.
+
+*   **Problem 2: Unit Test State Leakage (`src/config.rs`)**
+    *   **Symptom:** `config::tests::test_load_no_config_path_env_var` failed its assertion, indicating it was loading a config with `auto_update = true` instead of the default `false`.
+    *   **Root Cause:** Similar to the integration tests, the unit tests for `Config::load` were using `std::env::set_var` to manipulate `HOME` and `IP2ASN_CONFIG_PATH`. Since unit tests run in the *same* process, this state leakage was even more direct.
+    *   **Solution:** Added the `serial_test` crate as a dev-dependency. The conflicting tests in `config.rs` were marked with the `#[serial]` attribute. This forces `cargo test` to run them sequentially, preventing them from interfering with each other's environment variables while still allowing the rest of the test suite to run in parallel.
+
+These fixes have restored the stability of the test suite and led to the creation of new, explicit guidelines for writing concurrent-safe tests in the project's `.clinerules` and `spec.md`.
+
 ## 2025-08-02
 
 ### CLI Auto-Update and Configuration

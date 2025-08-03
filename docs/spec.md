@@ -299,3 +299,18 @@ long-running service.
 	downtime for lookups.
   * **API**: This could be exposed via a new wrapper struct, e.g.,
 	`UpdatingIpAsnMap`.
+
+-----
+
+## **9. Testing Idioms**
+
+To ensure a robust, deterministic, and parallel-safe test suite, the following idioms MUST be followed.
+
+	 * **Integration Tests (e.g., `tests/cli.rs`):**
+	     * **State Isolation:** Tests that invoke the CLI binary MUST NOT use `std::env::set_var` to configure the environment of the test process. This creates race conditions when tests are run in parallel.
+	     * **Correct Method:** Environment variables MUST be passed directly to the subprocess using `assert_cmd::Command::env("VAR", "VALUE")`. This isolates the environment to the specific command being run.
+	     * **Test Fixtures:** Use `rstest` fixtures and temporary directory helpers (like `tempfile`) to create hermetic environments for each test, ensuring no test can interfere with another's file system state.
+
+	 * **Unit Tests (e.g., `src/config.rs`):**
+	     * **The Challenge:** Some unit tests *must* modify the environment of the current process to test functions that directly read from it (e.g., `Config::load` reading `std::env::var("HOME")`).
+	     * **Correct Method:** These specific tests MUST be marked with the `#[serial]` attribute from the `serial_test` crate. This attribute guarantees that the test will run sequentially, not concurrently with any other `#[serial]` test, preventing state leakage.

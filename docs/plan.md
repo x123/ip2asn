@@ -103,7 +103,7 @@ chunk within a phase represents a small, testable unit of work.
     *   **TDD:** Write a test to ensure `Config::load` returns a default `Config` when no file or environment variable is present.
     *   **TDD:** Write a test that asserts `Config::load` returns a `CliError::Config` when attempting to load a non-existent configuration file.
 
-*   **[ ] Chunk 14.3: `ip2asn-cli` Main Logic Tests**
+*   **[x] Chunk 14.3: `ip2asn-cli` Main Logic Tests**
     *   **File:** `ip2asn-cli/src/main.rs`
     *   **TDD:** Write an integration test for `run_lookup` where the home directory cannot be found, asserting a `CliError::NotFound` error.
     *   **TDD:** Write an integration test for `run_lookup` where the dataset file is missing, asserting a `CliError::NotFound` error.

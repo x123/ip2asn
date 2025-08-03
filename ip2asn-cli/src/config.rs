@@ -60,6 +60,7 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
     use std::io::Write;
     use tempfile::NamedTempFile;
 
@@ -88,6 +89,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_load_no_config_path_env_var() {
         // Set a temporary home directory to ensure no real config is found.
         let temp_dir = tempfile::tempdir().unwrap();
@@ -100,6 +102,7 @@ mod tests {
         std::env::remove_var("HOME");
     }
     #[test]
+    #[serial]
     fn test_load_with_env_var() {
         let mut file = NamedTempFile::new().unwrap();
         writeln!(file, "auto_update = true").unwrap();
