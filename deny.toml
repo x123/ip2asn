@@ -24,6 +24,12 @@ name = "directories"
 version = "*"
 reason = "Use the `home` crate for consistency with ~/.cache and ~/.config paths"
 
+# Ban the `wiremock` crate in favor of `mockito`.
+# [[bans.deny]]
+# name = "wiremock"
+# version = "*"
+# reason = "Use `mockito` for improved test reliability and to avoid concurrency issues."
+
 [advisories]
 version = 2
 # The database to use for advisories.

@@ -1,15 +1,10 @@
 use assert_cmd::Command;
-use lazy_static::lazy_static;
 use predicates::prelude::*;
+use rstest::{fixture, rstest};
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
-use std::sync::Mutex;
 use tempfile::{tempdir, NamedTempFile, TempDir};
-
-lazy_static! {
-    static ref ENV_MUTEX: Mutex<()> = Mutex::new(());
-}
 
 /// A test environment guard that sets up a temporary home directory and cleans up on drop.
 ///
@@ -17,95 +12,104 @@ lazy_static! {
 /// cache, or config files. It works by creating a temporary directory and overriding
 /// the HOME environment variable for the duration of the test.
 struct TestEnv {
-    _temp_dir: TempDir,
-    // Keep config file in scope to prevent premature deletion
-    _config_file: NamedTempFile,
+    _home_dir: TempDir,
+    cache_dir: PathBuf,
+    config_file: NamedTempFile,
 }
 
 impl TestEnv {
     fn new(auto_update: bool) -> Self {
-        let temp_dir = tempdir().unwrap();
-        let home_path = temp_dir.path();
-
-        // Set HOME so the CLI uses the temporary directory for its cache and config.
-        std::env::set_var("HOME", home_path);
-
-        // Create a config file inside the temp dir.
-        let mut config_file = NamedTempFile::new_in(home_path).unwrap();
-        writeln!(config_file, "auto_update = {}", auto_update).unwrap();
-        std::env::set_var("IP2ASN_CONFIG_PATH", config_file.path());
-
-        // Create the cache directory but do not populate it.
-        let cache_dir = home_path.join(".cache/ip2asn");
+        let home_dir = tempdir().unwrap();
+        let cache_dir = home_dir.path().join(".cache/ip2asn");
         fs::create_dir_all(&cache_dir).unwrap();
 
+        let config_dir = home_dir.path().join(".config/ip2asn");
+        fs::create_dir_all(&config_dir).unwrap();
+        let mut config_file = NamedTempFile::new_in(&config_dir).unwrap();
+        writeln!(config_file, "auto_update = {}", auto_update).unwrap();
+
         TestEnv {
-            _temp_dir: temp_dir,
-            _config_file: config_file,
+            _home_dir: home_dir,
+            cache_dir,
+            config_file,
         }
     }
 
     fn populate_cache(&self) {
-        let home_path = std::env::var("HOME").unwrap();
-        let cache_dir = PathBuf::from(home_path).join(".cache/ip2asn");
-        let data_path = cache_dir.join("data.tsv.gz");
-        fs::copy("../testdata/testdata-small-ip2asn.tsv.gz", &data_path).unwrap();
+        let data_path = self.cache_dir.join("data.tsv.gz");
+        let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let workspace_root = manifest_dir.parent().unwrap();
+        let source_path = workspace_root.join("testdata/testdata-small-ip2asn.tsv.gz");
+
+        fs::copy(&source_path, &data_path).unwrap_or_else(|e| {
+            panic!(
+                "Failed to copy test data from '{}' to '{}': {}",
+                source_path.display(),
+                data_path.display(),
+                e
+            )
+        });
+    }
+
+    fn cmd(&self) -> Command {
+        let mut cmd = Command::cargo_bin("ip2asn").unwrap();
+        cmd.arg("--config")
+            .arg(self.config_file.path())
+            .arg("--cache-dir")
+            .arg(&self.cache_dir);
+        cmd
     }
 }
 
-impl Drop for TestEnv {
-    fn drop(&mut self) {
-        std::env::remove_var("HOME");
-        std::env::remove_var("IP2ASN_CONFIG_PATH");
-    }
+#[fixture]
+fn test_env_unpopulated() -> TestEnv {
+    TestEnv::new(false)
 }
 
-#[test]
-fn test_lookup_single_ip() {
-    let _guard = ENV_MUTEX.lock().unwrap();
+#[fixture]
+fn test_env_populated() -> TestEnv {
     let env = TestEnv::new(false);
     env.populate_cache();
+    env
+}
 
-    let mut cmd = Command::cargo_bin("ip2asn").unwrap();
+#[fixture]
+fn test_env_populated_autoupdate() -> TestEnv {
+    let env = TestEnv::new(true);
+    env.populate_cache();
+    env
+}
+
+#[rstest]
+fn test_lookup_single_ip(test_env_populated: TestEnv) {
+    let mut cmd = test_env_populated.cmd();
     cmd.arg("1.1.1.1");
     cmd.assert().success().stdout(predicate::str::contains(
         "13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US",
     ));
 }
 
-#[test]
-fn test_lookup_subcommand_still_works() {
-    let _guard = ENV_MUTEX.lock().unwrap();
-    let env = TestEnv::new(false);
-    env.populate_cache();
-
-    let mut cmd = Command::cargo_bin("ip2asn").unwrap();
+#[rstest]
+fn test_lookup_subcommand_still_works(test_env_populated: TestEnv) {
+    let mut cmd = test_env_populated.cmd();
     cmd.arg("lookup").arg("1.1.1.1");
     cmd.assert().success().stdout(predicate::str::contains(
         "13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US",
     ));
 }
 
-#[test]
-fn test_lookup_not_found() {
-    let _guard = ENV_MUTEX.lock().unwrap();
-    let env = TestEnv::new(false);
-    env.populate_cache();
-
-    let mut cmd = Command::cargo_bin("ip2asn").unwrap();
+#[rstest]
+fn test_lookup_not_found(test_env_populated: TestEnv) {
+    let mut cmd = test_env_populated.cmd();
     cmd.arg("127.0.0.1");
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("127.0.0.1 | Not Found"));
 }
 
-#[test]
-fn test_lookup_stdin() {
-    let _guard = ENV_MUTEX.lock().unwrap();
-    let env = TestEnv::new(false);
-    env.populate_cache();
-
-    let mut cmd = Command::cargo_bin("ip2asn").unwrap();
+#[rstest]
+fn test_lookup_stdin(test_env_populated: TestEnv) {
+    let mut cmd = test_env_populated.cmd();
     // No args, should read from stdin
     cmd.write_stdin("8.8.8.8\n1.1.1.1\n");
     cmd.assert()
@@ -118,13 +122,9 @@ fn test_lookup_stdin() {
         ));
 }
 
-#[test]
-fn test_lookup_json_output() {
-    let _guard = ENV_MUTEX.lock().unwrap();
-    let env = TestEnv::new(false);
-    env.populate_cache();
-
-    let mut cmd = Command::cargo_bin("ip2asn").unwrap();
+#[rstest]
+fn test_lookup_json_output(test_env_populated: TestEnv) {
+    let mut cmd = test_env_populated.cmd();
     cmd.arg("--json").arg("1.1.1.1").arg("127.0.0.1");
     cmd.assert()
         .success()
@@ -150,35 +150,27 @@ fn test_lookup_data_file_not_found() {
 #[cfg(test)]
 mod auto_update_tests {
     use super::*;
-    use wiremock::matchers::{method, path};
-    use wiremock::{Mock, MockServer, ResponseTemplate};
+    use mockito;
 
+    #[rstest]
     #[tokio::test]
-    async fn test_auto_update_disabled() {
-        let _guard = ENV_MUTEX.lock().unwrap();
-        let env = TestEnv::new(false);
-        env.populate_cache();
-        std::env::set_var("IP2ASN_TESTING", "1");
-
-        let mut cmd = Command::cargo_bin("ip2asn").unwrap();
+    async fn test_auto_update_disabled(test_env_populated: TestEnv) {
+        let mut cmd = test_env_populated.cmd();
         cmd.arg("1.1.1.1");
         cmd.assert().success().stdout(
             predicate::str::contains("13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US")
                 .and(predicate::str::contains("Checking for dataset updates...").not()),
         );
-        std::env::remove_var("IP2ASN_TESTING");
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_auto_update_recent_file() {
-        let _guard = ENV_MUTEX.lock().unwrap();
-        let server = MockServer::start().await;
-        let env = TestEnv::new(true);
-        env.populate_cache();
+    async fn test_auto_update_remote_not_newer(test_env_populated_autoupdate: TestEnv) {
+        let env = test_env_populated_autoupdate;
+        let mut server = mockito::Server::new_async().await;
         std::env::set_var("IP2ASN_TESTING", "1");
 
-        let home_path = std::env::var("HOME").unwrap();
-        let data_path = PathBuf::from(home_path).join(".cache/ip2asn/data.tsv.gz");
+        let data_path = env.cache_dir.join("data.tsv.gz");
 
         // Make the local file seem old to bypass the 24h check.
         let old_time = filetime::FileTime::from_unix_time(1, 0);
@@ -190,18 +182,17 @@ mod auto_update_tests {
         // Mock the HEAD response to indicate the remote file has the *same* (old) modification time,
         // so no download should be triggered.
         let remote_mtime = httpdate::fmt_http_date(modified_time);
-        Mock::given(method("HEAD"))
-            .and(path("/data/ip2asn-combined.tsv.gz"))
-            .respond_with(
-                ResponseTemplate::new(200).insert_header("Last-Modified", remote_mtime.as_str()),
-            )
-            .mount(&server)
+        let mock = server
+            .mock("HEAD", "/data/ip2asn-combined.tsv.gz")
+            .with_status(200)
+            .with_header("Last-Modified", &remote_mtime)
+            .create_async()
             .await;
 
-        let mut cmd = Command::cargo_bin("ip2asn").unwrap();
+        let mut cmd = env.cmd();
         cmd.env(
             "IP2ASN_DATA_URL",
-            server.uri() + "/data/ip2asn-combined.tsv.gz",
+            server.url() + "/data/ip2asn-combined.tsv.gz",
         );
         cmd.arg("1.1.1.1");
 
@@ -212,22 +203,20 @@ mod auto_update_tests {
                 "13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US",
             ));
 
+        mock.assert_async().await;
         std::env::remove_var("IP2ASN_DATA_URL");
         std::env::remove_var("IP2ASN_TESTING");
-        // _env guard will clean up the rest
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_auto_update_triggers_download() {
-        let _guard = ENV_MUTEX.lock().unwrap();
+    async fn test_auto_update_triggers_download(test_env_populated_autoupdate: TestEnv) {
+        let env = test_env_populated_autoupdate;
         let _ = tracing_subscriber::fmt().with_test_writer().try_init();
-        let server = MockServer::start().await;
-        let env = TestEnv::new(true);
-        env.populate_cache();
+        let mut server = mockito::Server::new_async().await;
         std::env::set_var("IP2ASN_TESTING", "1");
 
-        let home_path = std::env::var("HOME").unwrap();
-        let data_path = PathBuf::from(home_path).join(".cache/ip2asn/data.tsv.gz");
+        let data_path = env.cache_dir.join("data.tsv.gz");
 
         // Make the local file seem old
         let old_time = filetime::FileTime::from_unix_time(1, 0);
@@ -235,12 +224,11 @@ mod auto_update_tests {
 
         // Mock the HEAD response to indicate a newer file
         let remote_mtime = httpdate::fmt_http_date(std::time::SystemTime::now());
-        Mock::given(method("HEAD"))
-            .and(path("/data/ip2asn-combined.tsv.gz"))
-            .respond_with(
-                ResponseTemplate::new(200).insert_header("Last-Modified", remote_mtime.as_str()),
-            )
-            .mount(&server)
+        let head_mock = server
+            .mock("HEAD", "/data/ip2asn-combined.tsv.gz")
+            .with_status(200)
+            .with_header("Last-Modified", &remote_mtime)
+            .create_async()
             .await;
 
         // Mock the GET response for the download
@@ -249,53 +237,44 @@ mod auto_update_tests {
         encoder.write_all(new_data.as_bytes()).unwrap();
         let compressed_data = encoder.finish().unwrap();
 
-        Mock::given(method("GET"))
-            .and(path("/data/ip2asn-combined.tsv.gz"))
-            .respond_with(ResponseTemplate::new(200).set_body_bytes(compressed_data))
-            .mount(&server)
+        let get_mock = server
+            .mock("GET", "/data/ip2asn-combined.tsv.gz")
+            .with_status(200)
+            .with_body(&compressed_data)
+            .create_async()
             .await;
 
-        let mut cmd = Command::cargo_bin("ip2asn").unwrap();
+        let mut cmd = env.cmd();
         cmd.env(
             "IP2ASN_DATA_URL",
-            server.uri() + "/data/ip2asn-combined.tsv.gz",
+            server.url() + "/data/ip2asn-combined.tsv.gz",
         );
         cmd.arg("8.8.8.8");
 
-        cmd.assert()
-            .success()
-            // Note: Stderr capture in tokio tests with assert_cmd can be flaky.
-            // The success of the command and the correct stdout using the *new*
-            // data provide sufficient evidence that the download was triggered.
-            // .stderr(
-            //     predicate::str::contains("New dataset found. Downloading...")
-            //         .and(predicate::str::contains("Downloading dataset to")),
-            // )
-            .stdout(predicate::str::contains(
-                "15169 | 8.8.8.8 | 8.8.8.0/24 | GOOGLE | US",
-            ));
+        cmd.assert().success().stdout(predicate::str::contains(
+            "15169 | 8.8.8.8 | 8.8.8.0/24 | GOOGLE | US",
+        ));
 
+        head_mock.assert_async().await;
+        get_mock.assert_async().await;
         std::env::remove_var("IP2ASN_DATA_URL");
         std::env::remove_var("IP2ASN_TESTING");
-        // _env guard will clean up the rest
     }
 }
 
 #[cfg(test)]
 mod command_tests {
     use super::*;
-    use wiremock::matchers::{method, path};
-    use wiremock::{Mock, MockServer, ResponseTemplate};
+    use mockito;
 
+    #[rstest]
     #[tokio::test]
-    async fn test_update_subcommand_downloads_data() {
-        let _guard = ENV_MUTEX.lock().unwrap();
-        let server = MockServer::start().await;
-        let _env = TestEnv::new(false);
+    async fn test_update_subcommand_downloads_data(test_env_unpopulated: TestEnv) {
+        let env = test_env_unpopulated;
+        let mut server = mockito::Server::new_async().await;
         std::env::set_var("IP2ASN_TESTING", "1");
 
-        let home_path = std::env::var("HOME").unwrap();
-        let data_path = PathBuf::from(home_path).join(".cache/ip2asn/data.tsv.gz");
+        let data_path = env.cache_dir.join("data.tsv.gz");
         assert!(!data_path.exists());
 
         // Mock the GET response for the download
@@ -304,20 +283,18 @@ mod command_tests {
         encoder.write_all(new_data.as_bytes()).unwrap();
         let compressed_data = encoder.finish().unwrap();
 
-        Mock::given(method("GET"))
-            .and(path("/data/ip2asn-combined.tsv.gz"))
-            .respond_with(
-                ResponseTemplate::new(200)
-                    .set_body_bytes(compressed_data.clone())
-                    .insert_header("Content-Length", compressed_data.len().to_string().as_str()),
-            )
-            .mount(&server)
+        let mock = server
+            .mock("GET", "/data/ip2asn-combined.tsv.gz")
+            .with_status(200)
+            .with_header("Content-Length", &compressed_data.len().to_string())
+            .with_body(&compressed_data)
+            .create_async()
             .await;
 
-        let mut cmd = Command::cargo_bin("ip2asn").unwrap();
+        let mut cmd = env.cmd();
         cmd.env(
             "IP2ASN_DATA_URL",
-            server.uri() + "/data/ip2asn-combined.tsv.gz",
+            server.url() + "/data/ip2asn-combined.tsv.gz",
         );
         cmd.arg("update");
 
@@ -325,6 +302,7 @@ mod command_tests {
             .success()
             .stderr(predicate::str::contains("Downloading dataset to"));
 
+        mock.assert_async().await;
         assert!(data_path.exists());
         // Verify the content of the downloaded file
         let file_content = fs::read(&data_path).unwrap();
@@ -332,26 +310,25 @@ mod command_tests {
 
         std::env::remove_var("IP2ASN_DATA_URL");
         std::env::remove_var("IP2ASN_TESTING");
-        // env guard will clean up the rest
     }
 
+    #[rstest]
     #[tokio::test]
-    async fn test_network_error_during_update() {
-        let _guard = ENV_MUTEX.lock().unwrap();
-        let server = MockServer::start().await;
-        let _env = TestEnv::new(false);
+    async fn test_network_error_during_update(test_env_unpopulated: TestEnv) {
+        let env = test_env_unpopulated;
+        let mut server = mockito::Server::new_async().await;
         std::env::set_var("IP2ASN_TESTING", "1");
 
-        Mock::given(method("GET"))
-            .and(path("/data/ip2asn-combined.tsv.gz"))
-            .respond_with(ResponseTemplate::new(500))
-            .mount(&server)
+        let mock = server
+            .mock("GET", "/data/ip2asn-combined.tsv.gz")
+            .with_status(500)
+            .create_async()
             .await;
 
-        let mut cmd = Command::cargo_bin("ip2asn").unwrap();
+        let mut cmd = env.cmd();
         cmd.env(
             "IP2ASN_DATA_URL",
-            server.uri() + "/data/ip2asn-combined.tsv.gz",
+            server.url() + "/data/ip2asn-combined.tsv.gz",
         );
         cmd.arg("update");
 
@@ -359,17 +336,14 @@ mod command_tests {
             "Error: Update error: HTTP status server error (500 Internal Server Error)",
         ));
 
+        mock.assert_async().await;
         std::env::remove_var("IP2ASN_DATA_URL");
         std::env::remove_var("IP2ASN_TESTING");
     }
 
-    #[test]
-    fn test_lookup_invalid_stdin() {
-        let _guard = ENV_MUTEX.lock().unwrap();
-        let env = TestEnv::new(false);
-        env.populate_cache();
-
-        let mut cmd = Command::cargo_bin("ip2asn").unwrap();
+    #[rstest]
+    fn test_lookup_invalid_stdin(test_env_populated: TestEnv) {
+        let mut cmd = test_env_populated.cmd();
         cmd.write_stdin("8.8.8.8\nnot-an-ip\n1.1.1.1\n");
         cmd.assert()
             .success()

@@ -56,6 +56,10 @@ audit:
 install-audit:
     @cargo install cargo-audit
 
+# install llvm-cov
+install llvm-cov:
+   @cargo install cargo-llvm-cov --locked
+
 # install cargo-textest
 install-nextest:
     @cargo install cargo-nextest --locked
@@ -63,3 +67,11 @@ install-nextest:
 # Run benchmarks
 bench *extra_args:
     @cargo bench --all-features {{extra_args}}
+
+# Generate LCOV test coverage report
+coverage:
+    @cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+
+# Generate HTML test coverage report
+coverage-html:
+    @cargo llvm-cov --all-features --workspace --html --output-dir coverage

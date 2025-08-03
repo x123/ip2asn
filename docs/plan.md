@@ -82,7 +82,7 @@ chunk within a phase represents a small, testable unit of work.
     *   **Task:** Simplify the JSON serialization logic in the `perform_lookup` function to remove redundant code.
     *   **Verification:** All tests from Chunk 13.1 should now pass.
 
-*   **[ ] Chunk 13.3: Test Suite & Tooling Enhancements**
-    *   **Task:** Refactor the test setup in `tests/cli.rs` to abstract the boilerplate `ENV_MUTEX` and `TestEnv` instantiation into a helper function or macro.
+*   **[x] Chunk 13.3: Test Suite & Tooling Enhancements**
+    *   **Task:** Refactor the test setup in `tests/cli.rs` to use `rstest` fixtures, abstracting away the boilerplate `ENV_MUTEX` and `TestEnv` instantiation.
     *   **Task:** Add a new `coverage` recipe to the `justfile` that uses `cargo-llvm-cov` to generate an LCOV report.
     *   **Task:** Add a `coverage-html` recipe to the `justfile` to generate a user-friendly HTML report from the LCOV data.

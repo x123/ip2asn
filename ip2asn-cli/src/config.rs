@@ -14,13 +14,18 @@ impl Default for Config {
 }
 
 impl Config {
-    pub fn load() -> Result<Self, CliError> {
-        let config_path = if let Ok(path) = std::env::var("IP2ASN_CONFIG_PATH") {
-            std::path::PathBuf::from(path)
-        } else if let Some(home_dir) = home::home_dir() {
-            home_dir.join(".config/ip2asn/config.toml")
-        } else {
-            return Ok(Self::default());
+    pub fn load(path: Option<&std::path::Path>) -> Result<Self, CliError> {
+        let config_path = match path {
+            Some(p) => p.to_path_buf(),
+            None => {
+                if let Ok(p_str) = std::env::var("IP2ASN_CONFIG_PATH") {
+                    std::path::PathBuf::from(p_str)
+                } else if let Some(home_dir) = home::home_dir() {
+                    home_dir.join(".config/ip2asn/config.toml")
+                } else {
+                    return Ok(Self::default());
+                }
+            }
         };
 
         if !config_path.exists() {
@@ -48,64 +53,45 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lazy_static::lazy_static;
     use std::io::Write;
-    use std::sync::Mutex;
     use tempfile::NamedTempFile;
-
-    lazy_static! {
-        static ref CONFIG_TEST_MUTEX: Mutex<()> = Mutex::new(());
-    }
 
     #[test]
     fn test_load_valid_config() {
-        let _guard = CONFIG_TEST_MUTEX.lock().unwrap();
         let mut file = NamedTempFile::new().unwrap();
         writeln!(file, "auto_update = true").unwrap();
-        std::env::set_var("IP2ASN_CONFIG_PATH", file.path());
-
-        let config = Config::load().unwrap();
+        let config = Config::load(Some(file.path())).unwrap();
         assert!(config.auto_update);
-
-        std::env::remove_var("IP2ASN_CONFIG_PATH");
     }
 
     #[test]
     fn test_load_malformed_config() {
-        let _guard = CONFIG_TEST_MUTEX.lock().unwrap();
         let mut file = NamedTempFile::new().unwrap();
         writeln!(file, "auto_update = not-a-boolean").unwrap();
-        std::env::set_var("IP2ASN_CONFIG_PATH", file.path());
-
-        let result = Config::load();
+        let result = Config::load(Some(file.path()));
         assert!(matches!(result, Err(CliError::Config(_))));
-
-        std::env::remove_var("IP2ASN_CONFIG_PATH");
     }
 
     #[test]
     fn test_load_missing_config_file() {
-        let _guard = CONFIG_TEST_MUTEX.lock().unwrap();
-        // Ensure the env var points to a non-existent file
-        std::env::set_var("IP2ASN_CONFIG_PATH", "/tmp/this/path/should/not/exist.toml");
-
-        let config = Config::load().unwrap();
+        let config = Config::load(Some(std::path::Path::new(
+            "/tmp/this/path/should/not/exist.toml",
+        )))
+        .unwrap();
         // Should return default config
         assert!(!config.auto_update);
-
-        std::env::remove_var("IP2ASN_CONFIG_PATH");
     }
 
     #[test]
     fn test_load_no_config_path_env_var() {
-        let _guard = CONFIG_TEST_MUTEX.lock().unwrap();
-        std::env::remove_var("IP2ASN_CONFIG_PATH");
-
+        // Set a temporary home directory to ensure no real config is found.
         let temp_dir = tempfile::tempdir().unwrap();
         std::env::set_var("HOME", temp_dir.path());
-        let config = Config::load().unwrap();
-        // Should return default config
+
+        let config = Config::load(None).unwrap();
+        // Should return default config because the temp home is empty.
         assert!(!config.auto_update);
+
         std::env::remove_var("HOME");
     }
 }

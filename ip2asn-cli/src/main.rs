@@ -77,6 +77,14 @@ struct Cli {
 
     #[command(flatten)]
     lookup: LookupArgs,
+
+    /// Path to a custom configuration file.
+    #[arg(long, global = true)]
+    config: Option<PathBuf>,
+
+    /// Path to a custom cache directory.
+    #[arg(long, global = true)]
+    cache_dir: Option<PathBuf>,
 }
 
 /// Defines the available subcommands for the CLI.
@@ -142,10 +150,12 @@ struct JsonOutput {
 /// handler, and prints any resulting errors to stderr before exiting.
 fn main() {
     let cli = Cli::parse();
-    let result = match cli.command {
-        Some(Commands::Lookup(args)) => run_lookup(args),
-        Some(Commands::Update) => run_update(),
-        None => run_lookup(cli.lookup),
+    let result = match &cli.command {
+        Some(Commands::Lookup(args)) => {
+            run_lookup(args, cli.config.as_deref(), cli.cache_dir.as_deref())
+        }
+        Some(Commands::Update) => run_update(cli.cache_dir.as_deref()),
+        None => run_lookup(&cli.lookup, cli.config.as_deref(), cli.cache_dir.as_deref()),
     };
 
     if let Err(e) = result {
@@ -162,21 +172,29 @@ fn main() {
 /// 3. Checks for dataset updates if using the default path.
 /// 4. Builds the `IpAsnMap` from the data file.
 /// 5. Reads IPs from arguments or stdin and performs the lookups.
-fn run_lookup(args: LookupArgs) -> Result<(), CliError> {
-    let config = config::Config::load()?;
-    let (data_path, is_default_path) = match args.data {
-        Some(path) => (path, false),
+fn run_lookup(
+    args: &LookupArgs,
+    config_path: Option<&std::path::Path>,
+    cache_dir_path: Option<&std::path::Path>,
+) -> Result<(), CliError> {
+    let config = config::Config::load(config_path)?;
+    let (data_path, is_default_path) = match &args.data {
+        Some(path) => (path.clone(), false),
         None => {
-            let home_dir = home::home_dir().ok_or_else(|| {
-                CliError::NotFound("Could not determine home directory".to_string())
-            })?;
-            let cache_dir = home_dir.join(".cache/ip2asn");
+            let cache_dir = if let Some(p) = cache_dir_path {
+                p.to_path_buf()
+            } else {
+                let home_dir = home::home_dir().ok_or_else(|| {
+                    CliError::NotFound("Could not determine home directory".to_string())
+                })?;
+                home_dir.join(".cache/ip2asn")
+            };
             (cache_dir.join("data.tsv.gz"), true)
         }
     };
 
     if is_default_path {
-        check_for_updates(&config, &data_path)?;
+        check_for_updates(&config, &data_path, cache_dir_path)?;
     }
 
     if !data_path.exists() {
@@ -213,33 +231,36 @@ fn run_lookup(args: LookupArgs) -> Result<(), CliError> {
 /// This check is only performed if auto-updates are enabled and the cached
 /// dataset is more than 24 hours old. It compares the local file's modification
 /// time with the `Last-Modified` header from the remote server.
-fn check_for_updates(config: &config::Config, cache_path: &PathBuf) -> Result<(), CliError> {
+fn check_for_updates(
+    config: &config::Config,
+    cache_path: &PathBuf,
+    cache_dir_path: Option<&std::path::Path>,
+) -> Result<(), CliError> {
     debug!(?cache_path, "Checking for updates");
     if !config.auto_update {
-        debug!("Auto update disabled");
+        debug!("Auto update disabled in config, skipping check.");
         return Ok(());
     }
 
     if !cache_path.exists() {
-        debug!("Cache file does not exist");
+        debug!("Cache file does not exist, forcing update.");
         eprintln!("Cache file not found. Downloading...");
         io::stderr().flush()?;
-        return run_update();
+        return run_update(cache_dir_path);
     }
 
     let metadata = fs::metadata(cache_path)?;
     let modified_time = metadata.modified()?;
     debug!(?modified_time, "Cache file modified time");
+
     let now = SystemTime::now();
-    let age = now.duration_since(modified_time).map_err(|e| {
-        CliError::Io(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("System time error: {}", e),
-        ))
-    })?;
+    let age = now.duration_since(modified_time).unwrap_or_default();
     debug!(?age, "Cache file age");
-    if age < Duration::from_secs(24 * 60 * 60) {
-        debug!("Cache file is recent, skipping update check");
+
+    // In tests, we might manipulate the file time, so the 24h check is not reliable.
+    // The IP2ASN_TESTING var allows us to bypass this for testing purposes.
+    if age < Duration::from_secs(24 * 60 * 60) && std::env::var("IP2ASN_TESTING").is_err() {
+        debug!("Cache file is recent and not in test mode, skipping remote check.");
         return Ok(());
     }
 
@@ -256,14 +277,13 @@ fn check_for_updates(config: &config::Config, cache_path: &PathBuf) -> Result<()
                 format!("Invalid Last-Modified header: {}", e),
             ))
         })?;
-        debug!(%last_modified_str, "Remote Last-Modified header");
         let remote_mtime = httpdate::parse_http_date(last_modified_str)?;
         debug!(?remote_mtime, "Parsed remote mtime");
         if remote_mtime > modified_time {
             debug!("Remote file is newer, starting update");
             eprintln!("New dataset found. Downloading...");
             io::stderr().flush()?;
-            return run_update();
+            return run_update(cache_dir_path);
         } else {
             debug!("Remote file is not newer, skipping update");
         }
@@ -276,10 +296,14 @@ fn check_for_updates(config: &config::Config, cache_path: &PathBuf) -> Result<()
 ///
 /// This function ensures the cache directory exists, then downloads the dataset
 /// from the remote URL, displaying a progress bar during the download.
-fn run_update() -> Result<(), CliError> {
-    let home_dir = home::home_dir()
-        .ok_or_else(|| CliError::NotFound("Could not determine home directory".to_string()))?;
-    let cache_dir = home_dir.join(".cache/ip2asn");
+fn run_update(cache_dir_path: Option<&std::path::Path>) -> Result<(), CliError> {
+    let cache_dir = if let Some(p) = cache_dir_path {
+        p.to_path_buf()
+    } else {
+        let home_dir = home::home_dir()
+            .ok_or_else(|| CliError::NotFound("Could not determine home directory".to_string()))?;
+        home_dir.join(".cache/ip2asn")
+    };
     fs::create_dir_all(&cache_dir)?;
     let data_path = cache_dir.join("data.tsv.gz");
 

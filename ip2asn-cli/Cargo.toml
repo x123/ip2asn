@@ -30,12 +30,11 @@ home = "0.5.11"
 [dev-dependencies]
 assert_cmd = "2.0"
 predicates = "3.1"
-wiremock = "0.6"
+mockito = "1.4.0"
 tempfile = "3.10"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 filetime = "0.2"
 flate2 = "1.0"
 httpdate = "1.0"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-lazy_static = "1.4.0"
-mutex = "0.1.0"
+rstest = "0.21"

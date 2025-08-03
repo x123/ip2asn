@@ -8,3 +8,5 @@ result
 .cargo
 testdata/ip2asn-combined.tsv
 testdata/ip2asn-combined.tsv.gz
+/coverage
+lcov.info
