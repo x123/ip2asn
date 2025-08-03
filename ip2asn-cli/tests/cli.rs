@@ -267,3 +267,108 @@ mod auto_update_tests {
         // _env guard will clean up the rest
     }
 }
+
+#[cfg(test)]
+mod command_tests {
+    use super::*;
+    use wiremock::matchers::{method, path};
+    use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    #[tokio::test]
+    async fn test_update_subcommand_downloads_data() {
+        let _guard = ENV_MUTEX.lock().unwrap();
+        let server = MockServer::start().await;
+        let _env = TestEnv::new(false);
+        std::env::set_var("IP2ASN_TESTING", "1");
+
+        let home_path = std::env::var("HOME").unwrap();
+        let data_path = PathBuf::from(home_path).join(".cache/ip2asn/data.tsv.gz");
+        // Remove the pre-populated data file to ensure the update command downloads it.
+        fs::remove_file(&data_path).unwrap();
+        assert!(!data_path.exists());
+
+        // Mock the GET response for the download
+        let new_data = "0.0.0.0\t0.0.0.255\t1\tUS\tTEST\n";
+        let mut encoder = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        encoder.write_all(new_data.as_bytes()).unwrap();
+        let compressed_data = encoder.finish().unwrap();
+
+        Mock::given(method("GET"))
+            .and(path("/data/ip2asn-combined.tsv.gz"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_bytes(compressed_data.clone())
+                    .insert_header("Content-Length", compressed_data.len().to_string().as_str()),
+            )
+            .mount(&server)
+            .await;
+
+        let mut cmd = Command::cargo_bin("ip2asn").unwrap();
+        cmd.env(
+            "IP2ASN_DATA_URL",
+            server.uri() + "/data/ip2asn-combined.tsv.gz",
+        );
+        cmd.arg("update");
+
+        cmd.assert()
+            .success()
+            .stderr(predicate::str::contains("Downloading dataset to"));
+
+        assert!(data_path.exists());
+        // Verify the content of the downloaded file
+        let file_content = fs::read(&data_path).unwrap();
+        assert_eq!(file_content, compressed_data);
+
+        std::env::remove_var("IP2ASN_DATA_URL");
+        std::env::remove_var("IP2ASN_TESTING");
+        // env guard will clean up the rest
+    }
+
+    #[tokio::test]
+    async fn test_network_error_during_update() {
+        let _guard = ENV_MUTEX.lock().unwrap();
+        let server = MockServer::start().await;
+        let _env = TestEnv::new(false);
+        std::env::set_var("IP2ASN_TESTING", "1");
+
+        Mock::given(method("GET"))
+            .and(path("/data/ip2asn-combined.tsv.gz"))
+            .respond_with(ResponseTemplate::new(500))
+            .mount(&server)
+            .await;
+
+        let mut cmd = Command::cargo_bin("ip2asn").unwrap();
+        cmd.env(
+            "IP2ASN_DATA_URL",
+            server.uri() + "/data/ip2asn-combined.tsv.gz",
+        );
+        cmd.arg("update");
+
+        cmd.assert().failure().stderr(predicate::str::contains(
+            "Error: Update error: error sending request for URL (https://",
+        ));
+
+        std::env::remove_var("IP2ASN_DATA_URL");
+        std::env::remove_var("IP2ASN_TESTING");
+    }
+
+    #[test]
+    fn test_lookup_invalid_stdin() {
+        let _guard = ENV_MUTEX.lock().unwrap();
+        let _env = TestEnv::new(false);
+
+        let mut cmd = Command::cargo_bin("ip2asn").unwrap();
+        cmd.write_stdin("8.8.8.8\nnot-an-ip\n1.1.1.1\n");
+        cmd.assert()
+            .success()
+            .stdout(predicate::str::contains(
+                "15169 | 8.8.8.8 | 8.8.8.0/24 | GOOGLE | US",
+            ))
+            .stdout(predicate::str::contains(
+                "13335 | 1.1.1.1 | 1.1.1.0/24 | CLOUDFLARENET | US",
+            ))
+            .stderr(predicate::str::contains(
+                "Error: Invalid IP address 'not-an-ip'",
+            ));
+    }
+}

@@ -71,7 +71,7 @@ chunk within a phase represents a small, testable unit of work.
 
 **Goal:** Enhance the robustness, maintainability, and testability of the `ip2asn-cli` tool by implementing a comprehensive test suite first, followed by targeted code refactoring and tooling improvements.
 
-*   **[ ] Chunk 13.1: Expand Test Coverage (Write Failing Tests)**
+*   **[x] Chunk 13.1: Expand Test Coverage (Write Failing Tests)**
     *   **TDD: Write a failing integration test for the `update` subcommand.** This test will directly invoke `ip2asn-cli update`, use `wiremock` to mock the server response, and assert that the dataset is downloaded to the correct cache location.
     *   **TDD: Write failing unit tests for `config.rs`.** These tests will cover loading a valid config, handling a malformed config file, and correctly applying default values when the file is missing.
     *   **TDD: Write failing integration tests for specific error conditions.** Use `wiremock` to simulate network failures (e.g., 500 errors) and assert that the CLI returns the appropriate error messages. Add a test for invalid `stdin` to ensure graceful error handling.

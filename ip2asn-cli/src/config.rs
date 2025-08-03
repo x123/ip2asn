@@ -44,3 +44,71 @@ impl Config {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lazy_static::lazy_static;
+    use std::io::Write;
+    use std::sync::Mutex;
+    use tempfile::{tempdir, NamedTempFile};
+
+    lazy_static! {
+        static ref CONFIG_TEST_MUTEX: Mutex<()> = Mutex::new(());
+    }
+
+    #[test]
+    fn test_load_valid_config() {
+        let _guard = CONFIG_TEST_MUTEX.lock().unwrap();
+        let mut file = NamedTempFile::new().unwrap();
+        writeln!(file, "auto_update = true").unwrap();
+        std::env::set_var("IP2ASN_CONFIG_PATH", file.path());
+
+        let config = Config::load().unwrap();
+        assert!(config.auto_update);
+
+        std::env::remove_var("IP2ASN_CONFIG_PATH");
+    }
+
+    #[test]
+    fn test_load_malformed_config() {
+        let _guard = CONFIG_TEST_MUTEX.lock().unwrap();
+        let mut file = NamedTempFile::new().unwrap();
+        writeln!(file, "auto_update = not-a-boolean").unwrap();
+        std::env::set_var("IP2ASN_CONFIG_PATH", file.path());
+
+        let result = Config::load();
+        assert!(matches!(result, Err(CliError::Config(_))));
+
+        std::env::remove_var("IP2ASN_CONFIG_PATH");
+    }
+
+    #[test]
+    fn test_load_missing_config_file() {
+        let _guard = CONFIG_TEST_MUTEX.lock().unwrap();
+        // Ensure the env var points to a non-existent file
+        std::env::set_var("IP2ASN_CONFIG_PATH", "/tmp/this/path/should/not/exist.toml");
+
+        let config = Config::load().unwrap();
+        // Should return default config
+        assert!(!config.auto_update);
+
+        std::env::remove_var("IP2ASN_CONFIG_PATH");
+    }
+
+    #[test]
+    fn test_load_no_config_path_env_var() {
+        let _guard = CONFIG_TEST_MUTEX.lock().unwrap();
+        std::env::remove_var("IP2ASN_CONFIG_PATH");
+
+        // Create a temporary, empty home directory to ensure no config is found.
+        let temp_dir = tempdir().unwrap();
+        std::env::set_var("HOME", temp_dir.path());
+
+        let config = Config::load().unwrap();
+        // Should return default config
+        assert!(!config.auto_update);
+
+        std::env::remove_var("HOME");
+    }
+}
