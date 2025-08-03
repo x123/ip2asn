@@ -91,13 +91,13 @@ chunk within a phase represents a small, testable unit of work.
 
 **Goal:** Systematically improve test coverage for both the `ip2asn-cli` and `ip2asn` crates by implementing the test cases outlined in `docs/spec-test-coverage.md`. This will be done file-by-file to ensure methodical progress and maintain a working state at each step.
 
-*   **[ ] Chunk 14.1: `ip2asn-cli` Error Handling Tests**
+*   **[x] Chunk 14.1: `ip2asn-cli` Error Handling Tests**
     *   **File:** `ip2asn-cli/src/error.rs`
     *   **TDD:** Write unit tests for the `fmt::Display` implementation of `CliError`, covering each variant.
     *   **TDD:** Write unit tests for the `std::error::Error` implementation of `CliError`, verifying that `source()` returns the correct underlying error for wrapped variants.
     *   **TDD:** Write unit tests for each `From` trait implementation, ensuring correct conversion from source errors to `CliError` variants.
 
-*   **[ ] Chunk 14.2: `ip2asn-cli` Configuration Tests**
+*   **[x] Chunk 14.2: `ip2asn-cli` Configuration Tests**
     *   **File:** `ip2asn-cli/src/config.rs`
     *   **TDD:** Write a test to verify that `Config::load` correctly uses the `IP2ASN_CONFIG_PATH` environment variable.
     *   **TDD:** Write a test to ensure `Config::load` returns a default `Config` when no file or environment variable is present.
