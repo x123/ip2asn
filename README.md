@@ -39,7 +39,7 @@ Add `ip2asn` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ip2asn = "0.1.1"
+ip2asn = "0.1.2"
 ```
 
 Then, use the `Builder` to load your data and perform lookups.
