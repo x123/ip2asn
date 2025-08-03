@@ -631,3 +631,126 @@ pub struct AsnInfoView<'a> {
     /// The common name of the organization that owns the IP range.
     pub organization: &'a str,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io;
+
+    #[test]
+    fn test_error_source() {
+        let io_error = Error::Io(io::Error::new(io::ErrorKind::NotFound, "file not found"));
+        assert!(io_error.source().is_some());
+
+        #[cfg(feature = "fetch")]
+        {
+            let client = reqwest::blocking::Client::new();
+            let req = client.get("http://0.0.0.0:1").build().unwrap();
+            let http_error = Error::Http(client.execute(req).unwrap_err());
+            assert!(http_error.source().is_some());
+        }
+
+        let parse_error = Error::Parse {
+            line_number: 1,
+            line_content: "bad line".to_string(),
+            kind: ParseErrorKind::IncorrectColumnCount {
+                expected: 5,
+                found: 1,
+            },
+        };
+        assert!(parse_error.source().is_none());
+    }
+
+    #[test]
+    fn test_error_display() {
+        let io_error = Error::Io(io::Error::new(io::ErrorKind::NotFound, "file not found"));
+        assert_eq!(io_error.to_string(), "I/O error: file not found");
+
+        #[cfg(feature = "fetch")]
+        {
+            // This is hard to test deterministically, so we just check that it contains
+            // the prefix. The underlying error message can change.
+            let client = reqwest::blocking::Client::new();
+            let req = client.get("http://0.0.0.0:1").build().unwrap();
+            let http_error = Error::Http(client.execute(req).unwrap_err());
+            assert!(http_error.to_string().starts_with("HTTP error:"));
+        }
+
+        let parse_error = Error::Parse {
+            line_number: 42,
+            line_content: "bad line".to_string(),
+            kind: ParseErrorKind::InvalidAsnNumber {
+                value: "not-a-number".to_string(),
+            },
+        };
+        assert_eq!(
+            parse_error.to_string(),
+            "Parse error on line 42: invalid ASN: not-a-number in line: \"bad line\""
+        );
+    }
+
+    #[test]
+    fn test_warning_display() {
+        let parse_warning = Warning::Parse {
+            line_number: 10,
+            line_content: "another bad line".to_string(),
+            message: "some issue".to_string(),
+        };
+        assert_eq!(
+            parse_warning.to_string(),
+            "Parse warning on line 10: some issue in line: \"another bad line\""
+        );
+
+        let mismatch_warning = Warning::IpFamilyMismatch {
+            line_number: 20,
+            line_content: "v4-and-v6".to_string(),
+        };
+        assert_eq!(
+            mismatch_warning.to_string(),
+            "IP family mismatch on line 20: \"v4-and-v6\""
+        );
+    }
+
+    #[test]
+    fn test_parse_error_kind_display() {
+        let err = ParseErrorKind::IncorrectColumnCount {
+            expected: 5,
+            found: 4,
+        };
+        assert_eq!(err.to_string(), "expected 5 columns, but found 4");
+
+        let err = ParseErrorKind::InvalidIpAddress {
+            field: "start_ip".to_string(),
+            value: "not-an-ip".to_string(),
+        };
+        assert_eq!(
+            err.to_string(),
+            "invalid IP address for field `start_ip`: not-an-ip"
+        );
+
+        let err = ParseErrorKind::InvalidAsnNumber {
+            value: "not-a-number".to_string(),
+        };
+        assert_eq!(err.to_string(), "invalid ASN: not-a-number");
+
+        let err = ParseErrorKind::InvalidRange {
+            start_ip: "1.1.1.1".parse().unwrap(),
+            end_ip: "1.1.1.0".parse().unwrap(),
+        };
+        assert_eq!(
+            err.to_string(),
+            "start IP 1.1.1.1 is greater than end IP 1.1.1.0"
+        );
+
+        let err = ParseErrorKind::IpFamilyMismatch;
+        assert_eq!(
+            err.to_string(),
+            "start and end IPs are of different families"
+        );
+
+        let err = ParseErrorKind::InvalidCountryCode {
+            value: "USA".to_string(),
+        };
+        assert_eq!(err.to_string(), "invalid country code: USA");
+    }
+}

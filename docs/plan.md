@@ -119,7 +119,7 @@ chunk within a phase represents a small, testable unit of work.
         *   An empty string as input, asserting `Ok(())`.
         *   An invalid IP address, asserting correctly formatted JSON error output.
 
-*   **[ ] Chunk 14.4: Core Library Error & Warning Tests**
+*   **[x] Chunk 14.4: Core Library Error & Warning Tests**
     *   **File:** `src/lib.rs`
     *   **TDD:** Write unit tests for `Error::source` for each variant that wraps another error.
     *   **TDD:** Write unit tests for the `fmt::Display` implementations of `Error`, `Warning`, and `ParseErrorKind`, covering all variants.
