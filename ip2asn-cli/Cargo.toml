@@ -1,6 +1,6 @@
 [package]
 name = "ip2asn-cli"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["x123 <x123@users.noreply.github.com>"]
 license = "MIT"
